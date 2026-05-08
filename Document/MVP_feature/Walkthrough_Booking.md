@@ -22,7 +22,8 @@ Do hệ thống mới tinh, chúng ta cần tạo sẵn Customer, Worker và m�
   }
   ```
 > 📌 **Action:** Sau khi gọi API, lấy `accessToken` ở Response và lưu lại (Đây là Token của Khách).
-
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkODU5YTYyMS1hNTkyLTQwNGYtOGNhNy04YTFlZmZiNjI0MTQiLCJlbWFpbCI6ImN1c3RvbWVyQGZpeG5vdy5jb20iLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiTmd1eWVuIFZhbiBLaGFjaCIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IkNVU1RPTUVSIiwianRpIjoiMTIyYWQyMDktM2UxZS00ODk5LTkxYWUtYmNmODQxNzYzODU1IiwiZXhwIjoxNzc4MjU2NjE0LCJpc3MiOiJmaXhub3ctYXBpIiwiYXVkIjoiZml4bm93LWNsaWVudCJ9.wY5FeOFVYtNgkoVUt9Gdl0MNiUKiTprpqu-snHJSdTQ",
+  "refreshToken": "alokxgmiM/CMb9ty4b99u6G1jPUW1h9BfqnAh5uoS66wnQakljWuaMhPxQKoVytvACBWhiW7/AIpAr3HcZt7Ug==
 ### 1.2 Tạo tài khoản Worker (Thợ)
 - **Endpoint:** `POST /api/v1/auth/register`
 - **Body JSON:**
@@ -35,7 +36,8 @@ Do hệ thống mới tinh, chúng ta cần tạo sẵn Customer, Worker và m�
   }
   ```
 > 📌 **Action:** Sau khi gọi API, lấy `accessToken` ở Response và lưu lại (Đây là Token của Thợ).
-
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjMjMwZWVkYy0zOWQyLTRhZDQtYTRmZC02ZWI0N2MzMzJhMDUiLCJlbWFpbCI6IndvcmtlckBmaXhub3cuY29tIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6IlRyYW4gVmFuIFRobyIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IldPUktFUiIsImp0aSI6IjUyMDQwZTVlLWNmZTctNDBmYi1iNDI2LTJlMjQxNDljM2ZmYSIsImV4cCI6MTc3ODI1NjY1OSwiaXNzIjoiZml4bm93LWFwaSIsImF1ZCI6ImZpeG5vdy1jbGllbnQifQ.HAyT64a82R8WAqWKBoLS9AZhuCyCiqyT5nVQCPmzRuo",
+  "refreshToken": "WizY0xsMj64SvV+OkohXAN2lSO9y/8lzA/+JTlnlZi6Ar4xWF4ydD2sgfpQ6d3PZp/CXQuO/374htvL84W+FpQ==",
 ### 1.3 Tạo một Dịch vụ (Service)
 *(Lưu ý: Nếu API `/api/v1/services` đang bị khóa bởi `Authorize(Roles = "ADMIN")`, bạn hãy tạm comment dòng đó trong `ServiceController.cs` để test, hoặc inject trực tiếp vào DB)*.
 
@@ -49,7 +51,7 @@ Do hệ thống mới tinh, chúng ta cần tạo sẵn Customer, Worker và m�
   }
   ```
 > 📌 **Action:** Lấy `id` của dịch vụ vừa được tạo trong Response để dùng ở bước đặt đơn. Giả sử ID là `3fa85f64-5717-4562-b3fc-2c963f66afa6`.
-
+20076a05-248b-44ad-a49e-516be8390b2f
 ---
 
 ## BƯỚC 2: Thợ bật App và Bật Định vị (GPS)
@@ -85,7 +87,7 @@ Khách hàng đăng đơn, hệ thống sẽ tự tìm thợ trong bán kính 5k
   }
   ```
 > 📌 **Action:** Response sẽ trả về ID của Booking mới, trạng thái là `MATCHING`. Bạn hãy **copy Booking ID** này lại. Nhìn vào cửa sổ Terminal đang chạy `dotnet run`, bạn sẽ thấy log thông báo: `[NOTIFY] Worker <WorkerID> → New booking <BookingID>...`
-
+8dcb0420-546e-426d-913d-8bec829aad9e
 ---
 
 ## BƯỚC 4: Thợ nhận đơn

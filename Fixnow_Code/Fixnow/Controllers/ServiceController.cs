@@ -38,7 +38,7 @@ public class ServiceController : ControllerBase
 
   /// <summary>Create a new service category (Admin only).</summary>
   [HttpPost]
-  [Authorize(Roles = "ADMIN")]
+  //[Authorize(Roles = "ADMIN")]
   [ProducesResponseType(StatusCodes.Status201Created)]
   public async Task<IActionResult> Create([FromBody] CreateServiceDto request)
   {

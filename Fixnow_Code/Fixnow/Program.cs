@@ -65,12 +65,20 @@ builder.Services.AddScoped<IWorkerLocationRepository, WorkerLocationRepository>(
 builder.Services.AddScoped<IBookingMatchingLogRepository, BookingMatchingLogRepository>();
 builder.Services.AddScoped<IServiceCategoryRepository, ServiceCategoryRepository>();
 
+builder.Services.AddScoped<IWorkerProfileRepository, WorkerProfileRepository>();
+builder.Services.AddScoped<IWorkerKycRepository, WorkerKycRepository>();
+builder.Services.AddScoped<IWorkerServiceRepository, WorkerServiceRepository>();
+
 // ─── Services ─────────────────────────────────────────────────────────────────
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IMatchingService, MatchingService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
+
+builder.Services.AddScoped<IWorkerProfileService, WorkerProfileService>();
+builder.Services.AddScoped<IKycService, KycService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
 
 // ─── Controllers + Swagger ────────────────────────────────────────────────────
 builder.Services.AddControllers()
@@ -132,6 +140,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Serve static files from wwwroot (for KYC image uploads)
+app.UseStaticFiles();
+
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();

@@ -20,4 +20,12 @@ public class User
   public ICollection<Booking> CustomerBookings { get; set; } = new List<Booking>();
   public ICollection<Booking> WorkerBookings { get; set; } = new List<Booking>();
   public WorkerLocation? CurrentLocation { get; set; }
+
+  // Worker Management Navigation
+  public WorkerProfile? WorkerProfile { get; set; }
+  public ICollection<WorkerKyc> WorkerKycs { get; set; } = new List<WorkerKyc>();
+  public ICollection<WorkerService> WorkerServices { get; set; } = new List<WorkerService>();
+  public ICollection<WorkerLocationHistory> LocationHistories { get; set; } = new List<WorkerLocationHistory>();
+  public ICollection<WorkerReview> ReviewsGiven { get; set; } = new List<WorkerReview>();
+  public ICollection<WorkerReview> ReviewsReceived { get; set; } = new List<WorkerReview>();
 }

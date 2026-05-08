@@ -33,9 +33,9 @@ public class MatchingService : IMatchingService
     var booking = await _bookingRepo.FindByIdWithDetailsAsync(bookingId)
       ?? throw new KeyNotFoundException($"Booking {bookingId} not found.");
 
-    // Find nearby available workers within 5km
+    // Find nearby available workers within 5km, matching the requested ServiceId
     var nearbyWorkers = await _workerLocationRepo.FindNearbyAvailableWorkersAsync(
-      booking.Lat, booking.Lng, radiusMeters: 5000, limit: 20);
+      booking.Lat, booking.Lng, booking.ServiceId, radiusMeters: 5000, limit: 20);
 
     // Update booking status to MATCHING (even if no workers found yet)
     booking.Status = BookingStatus.MATCHING;

@@ -43,4 +43,11 @@ public class UserRepository : IUserRepository
     await _context.SaveChangesAsync();
     return user;
   }
+
+  /// <inheritdoc/>
+  public async Task UpdateAsync(User user)
+  {
+    _context.Users.Update(user);
+    await _context.SaveChangesAsync();
+  }
 }

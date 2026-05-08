@@ -19,6 +19,13 @@ public class AppDbContext : DbContext
   public DbSet<BookingStatusHistory> BookingStatusHistories => Set<BookingStatusHistory>();
   public DbSet<WorkerLocation> WorkerLocations => Set<WorkerLocation>();
   public DbSet<BookingMatchingLog> BookingMatchingLogs => Set<BookingMatchingLog>();
+  
+  // Worker Management DbSets
+  public DbSet<WorkerProfile> WorkerProfiles => Set<WorkerProfile>();
+  public DbSet<WorkerKyc> WorkerKycs => Set<WorkerKyc>();
+  public DbSet<WorkerService> WorkerServices => Set<WorkerService>();
+  public DbSet<WorkerLocationHistory> WorkerLocationHistories => Set<WorkerLocationHistory>();
+  public DbSet<WorkerReview> WorkerReviews => Set<WorkerReview>();
 
   protected override void OnModelCreating(ModelBuilder modelBuilder)
   {
@@ -52,6 +59,11 @@ public class AppDbContext : DbContext
       entity.HasOne(u => u.CurrentLocation)
         .WithOne(wl => wl.Worker)
         .HasForeignKey<WorkerLocation>(wl => wl.WorkerId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+      entity.HasOne(u => u.WorkerProfile)
+        .WithOne(wp => wp.User)
+        .HasForeignKey<WorkerProfile>(wp => wp.UserId)
         .OnDelete(DeleteBehavior.Cascade);
     });
 
@@ -128,6 +140,84 @@ public class AppDbContext : DbContext
       entity.HasOne(l => l.Worker)
         .WithMany()
         .HasForeignKey(l => l.WorkerId)
+        .OnDelete(DeleteBehavior.Cascade);
+    });
+
+    // ── WorkerProfile ──────────────────────────────────────────────────────────
+    modelBuilder.Entity<WorkerProfile>(entity =>
+    {
+      entity.ToTable("worker_profiles");
+      entity.HasKey(wp => wp.UserId);
+      entity.Property(wp => wp.AvailabilityStatus).HasConversion<string>().HasMaxLength(50);
+    });
+
+    // ── WorkerKyc ──────────────────────────────────────────────────────────────
+    modelBuilder.Entity<WorkerKyc>(entity =>
+    {
+      entity.ToTable("worker_kyc");
+      entity.HasKey(k => k.Id);
+      entity.Property(k => k.Status).HasConversion<string>().HasMaxLength(50);
+
+      entity.HasOne(k => k.Worker)
+        .WithMany(u => u.WorkerKycs)
+        .HasForeignKey(k => k.WorkerId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+      entity.HasOne(k => k.Admin)
+        .WithMany()
+        .HasForeignKey(k => k.VerifiedBy)
+        .OnDelete(DeleteBehavior.SetNull);
+    });
+
+    // ── WorkerService (Many-to-Many Mapping) ───────────────────────────────────
+    modelBuilder.Entity<WorkerService>(entity =>
+    {
+      entity.ToTable("worker_services");
+      entity.HasKey(ws => new { ws.WorkerId, ws.ServiceId });
+
+      entity.HasOne(ws => ws.Worker)
+        .WithMany(u => u.WorkerServices)
+        .HasForeignKey(ws => ws.WorkerId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+      entity.HasOne(ws => ws.Service)
+        .WithMany()
+        .HasForeignKey(ws => ws.ServiceId)
+        .OnDelete(DeleteBehavior.Cascade);
+    });
+
+    // ── WorkerLocationHistory ──────────────────────────────────────────────────
+    modelBuilder.Entity<WorkerLocationHistory>(entity =>
+    {
+      entity.ToTable("worker_location_histories");
+      entity.HasKey(lh => lh.Id);
+      entity.Property(lh => lh.Location).HasColumnType("geography(Point, 4326)");
+
+      entity.HasOne(lh => lh.Worker)
+        .WithMany(u => u.LocationHistories)
+        .HasForeignKey(lh => lh.WorkerId)
+        .OnDelete(DeleteBehavior.Cascade);
+    });
+
+    // ── WorkerReview ───────────────────────────────────────────────────────────
+    modelBuilder.Entity<WorkerReview>(entity =>
+    {
+      entity.ToTable("worker_reviews");
+      entity.HasKey(r => r.Id);
+
+      entity.HasOne(r => r.Booking)
+        .WithMany()
+        .HasForeignKey(r => r.BookingId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+      entity.HasOne(r => r.Customer)
+        .WithMany(u => u.ReviewsGiven)
+        .HasForeignKey(r => r.CustomerId)
+        .OnDelete(DeleteBehavior.Restrict);
+
+      entity.HasOne(r => r.Worker)
+        .WithMany(u => u.ReviewsReceived)
+        .HasForeignKey(r => r.WorkerId)
         .OnDelete(DeleteBehavior.Cascade);
     });
   }

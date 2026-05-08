@@ -43,6 +43,14 @@ public class WorkerLocationRepository : IWorkerLocationRepository
       existing.UpdatedAt = DateTime.UtcNow;
     }
 
+    // Save location history
+    _context.WorkerLocationHistories.Add(new WorkerLocationHistory
+    {
+      WorkerId = workerId,
+      Location = point,
+      CreatedAt = DateTime.UtcNow
+    });
+
     await _context.SaveChangesAsync();
   }
 
@@ -57,7 +65,7 @@ public class WorkerLocationRepository : IWorkerLocationRepository
   /// Workers are excluded if they have an active booking or stale location (older than 1 hour).
   /// </summary>
   public async Task<List<NearbyWorkerResult>> FindNearbyAvailableWorkersAsync(
-    double lat, double lng, double radiusMeters = 5000, int limit = 20)
+    double lat, double lng, Guid serviceId, double radiusMeters = 5000, int limit = 20)
   {
     var referencePoint = GeomFactory.CreatePoint(new Coordinate(lng, lat));
     var cutoff = DateTime.UtcNow.AddHours(-1);
@@ -78,8 +86,13 @@ public class WorkerLocationRepository : IWorkerLocationRepository
 
     return await _context.WorkerLocations
       .Include(wl => wl.Worker)
+        .ThenInclude(u => u.WorkerProfile)
+      .Include(wl => wl.Worker)
+        .ThenInclude(u => u.WorkerServices)
       .Where(wl => wl.Worker.Role == UserRole.WORKER)
       .Where(wl => wl.Worker.Status == "ACTIVE")
+      .Where(wl => wl.Worker.WorkerProfile != null && wl.Worker.WorkerProfile.AvailabilityStatus == WorkerAvailability.ONLINE)
+      .Where(wl => wl.Worker.WorkerServices.Any(ws => ws.ServiceId == serviceId))
       .Where(wl => wl.UpdatedAt >= cutoff)
       .Where(wl => !busyWorkerIds.Contains(wl.WorkerId))
       .Where(wl => wl.Location.IsWithinDistance(referencePoint, radiusMeters))

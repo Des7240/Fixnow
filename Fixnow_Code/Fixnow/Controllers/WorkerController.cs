@@ -46,10 +46,11 @@ public class WorkerController : ControllerBase
   public async Task<IActionResult> GetNearbyWorkers(
     [FromQuery] double lat,
     [FromQuery] double lng,
+    [FromQuery] Guid serviceId,
     [FromQuery] double radiusKm = 5)
   {
     var workers = await _locationRepo.FindNearbyAvailableWorkersAsync(
-      lat, lng, radiusMeters: radiusKm * 1000);
+      lat, lng, serviceId, radiusMeters: radiusKm * 1000);
 
     var result = workers.Select(w => new
     {

@@ -10,7 +10,7 @@ public interface IWorkerLocationRepository
   Task UpsertAsync(Guid workerId, double lat, double lng);
   Task<WorkerLocation?> FindByWorkerIdAsync(Guid workerId);
   Task<List<NearbyWorkerResult>> FindNearbyAvailableWorkersAsync(
-    double lat, double lng, double radiusMeters = 5000, int limit = 20);
+    double lat, double lng, Guid serviceId, double radiusMeters = 5000, int limit = 20);
 }
 
 /// <summary>Result model for nearby worker geo query.</summary>

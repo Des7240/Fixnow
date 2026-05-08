@@ -274,6 +274,7 @@ PATCH /api/v1/bookings/{id}/status
 
 Request:
 
+
 {
   "status": "ON_THE_WAY"
 }
