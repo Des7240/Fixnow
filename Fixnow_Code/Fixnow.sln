@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36414.22 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fixnow", "Fixnow\Fixnow.csproj", "{0EDAB34D-AB6D-41CD-ABBE-140000F9838C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0EDAB34D-AB6D-41CD-ABBE-140000F9838C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0EDAB34D-AB6D-41CD-ABBE-140000F9838C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0EDAB34D-AB6D-41CD-ABBE-140000F9838C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0EDAB34D-AB6D-41CD-ABBE-140000F9838C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {72970F78-AC0A-40DB-8346-1205D27BFF6F}
+	EndGlobalSection
+EndGlobal
