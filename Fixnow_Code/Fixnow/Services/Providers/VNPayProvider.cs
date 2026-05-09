@@ -19,8 +19,8 @@ public class VNPayProvider : IPaymentProvider
 
   public Task<string> CreatePaymentUrlAsync(PaymentRequestDto request)
   {
-    var tmnCode = _config["VNPay:TmnCode"] ?? "TCB00011";
-    var hashSecret = _config["VNPay:HashSecret"] ?? "RAO0S990OC9S2N5SBA9L912SV9P5JDPD";
+    var tmnCode = _config["VNPay:TmnCode"] ?? "4YUP19I4";
+    var hashSecret = _config["VNPay:HashSecret"] ?? "MDUIFDCRAKLNBPOFIAFNEKFRNMFBYEPX";
     var baseUrl = _config["VNPay:BaseUrl"] ?? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
 
     var vnp_Params = new SortedList<string, string>
@@ -39,21 +39,22 @@ public class VNPayProvider : IPaymentProvider
       { "vnp_TxnRef", request.PaymentId.ToString() }
     };
 
-    // Build raw data for signature (values NOT encoded)
-    // Build query string for URL (values ARE encoded)
-    var rawData = new StringBuilder();
+    var hashData = new StringBuilder();
     var queryPath = new StringBuilder();
 
     foreach (var kv in vnp_Params)
     {
       if (!string.IsNullOrEmpty(kv.Value))
       {
-        rawData.Append(kv.Key + "=" + kv.Value + "&");
-        queryPath.Append(WebUtility.UrlEncode(kv.Key) + "=" + WebUtility.UrlEncode(kv.Value) + "&");
+        var encodedKey = WebUtility.UrlEncode(kv.Key);
+        var encodedValue = WebUtility.UrlEncode(kv.Value);
+
+        hashData.Append(kv.Key + "=" + encodedValue + "&");
+        queryPath.Append(encodedKey + "=" + encodedValue + "&");
       }
     }
 
-    var signData = rawData.ToString().TrimEnd('&');
+    var signData = hashData.ToString().TrimEnd('&');
     var vnp_SecureHash = HmacSHA512(hashSecret, signData);
     var paymentUrl = $"{baseUrl}?{queryPath}vnp_SecureHash={vnp_SecureHash}";
 
@@ -62,7 +63,7 @@ public class VNPayProvider : IPaymentProvider
 
   public Task<PaymentResultDto> VerifyCallbackAsync(IQueryCollection query)
   {
-    var hashSecret = _config["VNPay:HashSecret"] ?? "RAO0S990OC9S2N5SBA9L912SV9P5JDPD";
+    var hashSecret = _config["VNPay:HashSecret"] ?? "MDUIFDCRAKLNBPOFIAFNEKFRNMFBYEPX";
 
     var vnpayData = new SortedList<string, string>();
     foreach (var k in query.Keys)
@@ -78,7 +79,9 @@ public class VNPayProvider : IPaymentProvider
     {
       if (!string.IsNullOrEmpty(kv.Value))
       {
-        sb.Append(kv.Key + "=" + kv.Value + "&");
+        // IMPORTANT: Match Java's URLEncoder.encode behavior in VnpayReturn.java
+        // encode values before hashing
+        sb.Append(kv.Key + "=" + WebUtility.UrlEncode(kv.Value) + "&");
       }
     }
     var signData = sb.ToString().TrimEnd('&');
@@ -120,7 +123,7 @@ public class VNPayProvider : IPaymentProvider
       var hashValue = hmac.ComputeHash(inputBytes);
       foreach (var theByte in hashValue)
       {
-        hash.Append(theByte.ToString("X2"));
+        hash.Append(theByte.ToString("x2"));
       }
     }
     return hash.ToString();

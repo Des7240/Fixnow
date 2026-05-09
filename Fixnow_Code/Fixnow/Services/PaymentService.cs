@@ -63,8 +63,8 @@ public class PaymentService : IPaymentService
 
     await _paymentRepo.CreateAsync(payment);
 
-    var baseUrl = _config["App:FrontendUrl"] ?? "http://localhost:5173";
-    var returnUrl = $"{baseUrl}/payment/callback/{request.Provider.ToString().ToLower()}";
+    var apiBaseUrl = _config["App:ApiBaseUrl"] ?? "https://localhost:7154";
+    var returnUrl = $"{apiBaseUrl}/api/v1/payments/{request.Provider.ToString().ToLower()}/callback";
 
     var paymentRequest = new PaymentRequestDto
     {

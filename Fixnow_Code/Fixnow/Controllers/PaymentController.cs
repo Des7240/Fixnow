@@ -11,10 +11,12 @@ namespace Fixnow.Controllers;
 public class PaymentController : ControllerBase
 {
   private readonly IPaymentService _paymentService;
+  private readonly IConfiguration _config;
 
-  public PaymentController(IPaymentService paymentService)
+  public PaymentController(IPaymentService paymentService, IConfiguration config)
   {
     _paymentService = paymentService;
+    _config = config;
   }
 
   private Guid CurrentUserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -45,9 +47,8 @@ public class PaymentController : ControllerBase
   {
     var result = await _paymentService.ProcessCallbackAsync("VNPAY", Request.Query);
     
-    // In real app, we usually redirect to a frontend page with the result status
-    var frontendUrl = "http://localhost:5173/payment/result";
-    return Redirect($"{frontendUrl}?success={result.IsSuccess}&provider=vnpay");
+    var frontendUrl = _config["App:FrontendUrl"] ?? "http://localhost:5173";
+    return Redirect($"{frontendUrl}/payment/result?success={result.IsSuccess}&provider=vnpay");
   }
 
   [HttpGet("momo/callback")]
@@ -56,7 +57,7 @@ public class PaymentController : ControllerBase
   {
     var result = await _paymentService.ProcessCallbackAsync("MOMO", Request.Query);
     
-    var frontendUrl = "http://localhost:5173/payment/result";
-    return Redirect($"{frontendUrl}?success={result.IsSuccess}&provider=momo");
+    var frontendUrl = _config["App:FrontendUrl"] ?? "http://localhost:5173";
+    return Redirect($"{frontendUrl}/payment/result?success={result.IsSuccess}&provider=momo");
   }
 }

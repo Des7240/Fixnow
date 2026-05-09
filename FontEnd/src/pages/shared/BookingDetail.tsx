@@ -215,8 +215,20 @@ export default function BookingDetail() {
       <div className="p-4 space-y-4 max-w-lg mx-auto">
         {/* Status Card */}
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 text-center">
-          <div className="inline-block px-4 py-1.5 rounded-full bg-orange-50 text-orange-600 text-xs font-bold mb-3">
-            {currentStatus}
+          <div className="flex gap-2 justify-center mb-3">
+            <div className="inline-block px-4 py-1.5 rounded-full bg-orange-50 text-orange-600 text-xs font-bold">
+              {currentStatus}
+            </div>
+            {booking.paymentStatus === 'PAID' && (
+              <div className="inline-block px-4 py-1.5 rounded-full bg-green-50 text-green-600 text-xs font-bold">
+                ĐÃ THANH TOÁN
+              </div>
+            )}
+            {booking.paymentStatus === 'UNPAID' && (currentStatus === 'WORKING' || currentStatus === 'COMPLETED') && (
+              <div className="inline-block px-4 py-1.5 rounded-full bg-red-50 text-red-600 text-xs font-bold">
+                CHƯA THANH TOÁN
+              </div>
+            )}
           </div>
           <h2 className="text-2xl font-black text-gray-900 mb-1">{booking.service.name}</h2>
           <p className="text-sm text-gray-500">Mã đơn: #{booking.id.split('-')[0]}</p>
