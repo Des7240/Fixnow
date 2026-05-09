@@ -29,6 +29,14 @@ public class WorkerKycRepository : IWorkerKycRepository
       .FirstOrDefaultAsync();
   }
 
+  public async Task<List<WorkerKyc>> GetAllAsync()
+  {
+    return await _context.WorkerKycs
+      .Include(k => k.Worker)
+      .OrderByDescending(k => k.SubmittedAt)
+      .ToListAsync();
+  }
+
   public async Task<WorkerKyc> CreateAsync(WorkerKyc kyc)
   {
     _context.WorkerKycs.Add(kyc);

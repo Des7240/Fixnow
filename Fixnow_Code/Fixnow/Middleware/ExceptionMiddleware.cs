@@ -38,7 +38,7 @@ public class ExceptionMiddleware
       InvalidOperationException => (HttpStatusCode.BadRequest, exception.Message),
       UnauthorizedAccessException => (HttpStatusCode.Unauthorized, exception.Message),
       KeyNotFoundException => (HttpStatusCode.NotFound, exception.Message),
-      _ => (HttpStatusCode.InternalServerError, "An unexpected error occurred.")
+      _ => (HttpStatusCode.InternalServerError, exception.ToString())
     };
 
     context.Response.ContentType = "application/json";

@@ -1,5 +1,6 @@
 using Fixnow.Data;
 using Fixnow.Entities;
+using Fixnow.Enums;
 using Fixnow.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,6 +31,8 @@ public class BookingRepository : IBookingRepository
       .Include(b => b.Customer)
       .Include(b => b.Worker)
       .Include(b => b.Service)
+      .Include(b => b.Quotations)
+        .ThenInclude(q => q.Items)
       .FirstOrDefaultAsync(b => b.Id == id);
   }
 
@@ -51,6 +54,18 @@ public class BookingRepository : IBookingRepository
       .Include(b => b.Service)
       .Include(b => b.Customer)
       .Where(b => b.WorkerId == workerId)
+      .OrderByDescending(b => b.CreatedAt)
+      .ToListAsync();
+  }
+
+  /// <inheritdoc/>
+  public async Task<List<Booking>> FindMatchingByWorkerAsync(Guid workerId)
+  {
+    return await _context.Bookings
+      .Include(b => b.Service)
+      .Include(b => b.Customer)
+      .Where(b => _context.BookingMatchingLogs
+        .Any(l => l.BookingId == b.Id && l.WorkerId == workerId && l.Status == MatchingLogStatus.NOTIFIED))
       .OrderByDescending(b => b.CreatedAt)
       .ToListAsync();
   }

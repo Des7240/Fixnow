@@ -18,3 +18,11 @@ docker run -d ^
   --name fixnow-redis `
   -p 6379:6379 `
   redis
+
+
+    {
+   2       "email": "admin@fixnow.com",
+   3       "password": "AdminPassword123",
+   4       "fullName": "Administrator",
+   5       "role": "ADMIN"
+   6     }

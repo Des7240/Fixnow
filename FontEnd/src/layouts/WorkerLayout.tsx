@@ -1,15 +1,23 @@
+import { useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Briefcase, ListOrdered, FileBadge, User } from 'lucide-react';
+import { Briefcase, ListOrdered, FileBadge, User, Bell, Wallet } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useNotificationStore } from '../stores/notificationStore';
 
 export default function WorkerLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { unreadCount, fetchUnreadCount } = useNotificationStore();
+
+  useEffect(() => {
+    fetchUnreadCount();
+  }, [fetchUnreadCount]);
 
   const navItems = [
     { path: '/worker', icon: Briefcase, label: 'Trang chủ' },
     { path: '/worker/bookings', icon: ListOrdered, label: 'Đơn hàng' },
-    { path: '/worker/kyc', icon: FileBadge, label: 'KYC' },
+    { path: '/worker/wallet', icon: Wallet, label: 'Ví tiền' },
+    { path: '/worker/notifications', icon: Bell, label: 'Thông báo', badge: unreadCount },
     { path: '/worker/profile', icon: User, label: 'Hồ sơ' },
   ];
 
@@ -38,10 +46,15 @@ export default function WorkerLayout() {
                 )}
               >
                 <div className={clsx(
-                  'p-1.5 rounded-xl transition-all duration-300',
+                  'p-1.5 rounded-xl transition-all duration-300 relative',
                   isActive ? 'bg-orange-50' : 'bg-transparent'
                 )}>
                   <Icon className={clsx('w-6 h-6', isActive ? 'stroke-[2.5px]' : 'stroke-2')} />
+                  {item.badge && item.badge > 0 && (
+                    <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white">
+                      {item.badge > 9 ? '9+' : item.badge}
+                    </span>
+                  )}
                 </div>
                 <span className={clsx(
                   'text-[10px] font-semibold',

@@ -3,6 +3,7 @@ using Fixnow.DTOs.Auth;
 using Fixnow.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Fixnow.Controllers;
 
@@ -22,6 +23,7 @@ public class AuthController : ControllerBase
 
   /// <summary>Register a new user account.</summary>
   [HttpPost("register")]
+  [EnableRateLimiting("otp-policy")]
   [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status201Created)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
   public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
@@ -32,6 +34,7 @@ public class AuthController : ControllerBase
 
   /// <summary>Login with email and password.</summary>
   [HttpPost("login")]
+  [EnableRateLimiting("login-policy")]
   [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   public async Task<IActionResult> Login([FromBody] LoginRequestDto request)

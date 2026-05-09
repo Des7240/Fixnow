@@ -1,365 +1,514 @@
-P0 – Booking + Worker Matching Module Design (FixNow)
-1. Booking + Worker Matching Scope (MVP)
-Chức năng thuộc P0
-Feature	Description
-Create Booking	Khách tạo đơn
-Booking Detail	Xem chi tiết booking
-Nearby Worker Search	Tìm thợ gần
-Worker Matching	Match thợ phù hợp
-Worker Accept/Reject	Thợ nhận/từ chối
-Booking Assignment	Gán thợ
-Booking Workflow	Trạng thái booking
-Cancel Booking	Hủy đơn
-Booking History	Lịch sử đơn
-Push Notification	Gửi thông báo
-2. Booking Workflow
+1. Module Scope
+Module	Description
+Notification System	Push + in-app notifications
+Booking Timeline	Booking event history
+Booking History	Customer & worker booking logs
+Review & Rating	Worker reviews & ratings
+Notification Center	User notification inbox
+Audit Events	Booking activity logs
+2. Overall Architecture
+flowchart TB
+
+    BOOKING["Booking Service"]
+
+    WORKER["Worker Service"]
+
+    REVIEW["Review Service"]
+
+    EVENTS["Event Dispatcher"]
+
+    NOTIFICATION["Notification Service"]
+
+    TIMELINE["Timeline Service"]
+
+    FCM["Firebase FCM"]
+
+    DB["PostgreSQL"]
+
+    CLIENT["React Frontend"]
+
+    BOOKING --> EVENTS
+
+    WORKER --> EVENTS
+
+    EVENTS --> NOTIFICATION
+    EVENTS --> TIMELINE
+
+    NOTIFICATION --> FCM
+
+    NOTIFICATION --> DB
+    TIMELINE --> DB
+    REVIEW --> DB
+
+    FCM --> CLIENT
+3. Notification Workflow
 flowchart TD
 
     START([Start])
 
-    CREATE["Create Booking"]
-    SAVE["Save Booking"]
+    EVENT["Business Event"]
 
-    SEARCH["Search Nearby Workers"]
-    MATCH["Worker Matching"]
+    CREATE["Create Notification"]
 
-    NOTIFY["Push Notification"]
+    SAVE["Save Notification"]
 
-    ACCEPT["Worker Accept"]
-    REJECT["Worker Reject"]
+    PUSH["Send Push Notification"]
 
-    ASSIGN["Assign Worker"]
+    INAPP["Store In-app Notification"]
+
+    USER["User Receives Notification"]
+
+    END([End])
+
+    START --> EVENT
+
+    EVENT --> CREATE
+
+    CREATE --> SAVE
+
+    SAVE --> PUSH
+
+    SAVE --> INAPP
+
+    PUSH --> USER
+
+    INAPP --> USER
+
+    USER --> END
+4. Booking Timeline Workflow
+flowchart TD
+
+    CREATE["Booking Created"]
+
+    MATCH["Worker Matched"]
+
+    ACCEPT["Worker Accepted"]
 
     ONWAY["Worker On The Way"]
+
     WORKING["Working"]
+
     COMPLETE["Completed"]
 
     CANCEL["Cancelled"]
 
-    END([End])
+    CREATE --> MATCH
 
-    START --> CREATE
-    CREATE --> SAVE
+    MATCH --> ACCEPT
 
-    SAVE --> SEARCH
-    SEARCH --> MATCH
+    ACCEPT --> ONWAY
 
-    MATCH --> NOTIFY
-
-    NOTIFY --> ACCEPT
-    NOTIFY --> REJECT
-
-    ACCEPT --> ASSIGN
-
-    ASSIGN --> ONWAY
     ONWAY --> WORKING
+
     WORKING --> COMPLETE
 
     CREATE --> CANCEL
-    ASSIGN --> CANCEL
+    ACCEPT --> CANCEL
+5. Review & Rating Workflow
+flowchart TD
 
-    COMPLETE --> END
-    CANCEL --> END
-3. Swimlane – Create Booking
+    COMPLETE["Booking Completed"]
+
+    REVIEW["Customer Reviews Worker"]
+
+    SAVE["Save Review"]
+
+    UPDATE["Update Worker Rating"]
+
+    DISPLAY["Display Public Rating"]
+
+    COMPLETE --> REVIEW
+
+    REVIEW --> SAVE
+
+    SAVE --> UPDATE
+
+    UPDATE --> DISPLAY
+6. Swimlane – Notification Flow
 flowchart LR
 
-    subgraph CUSTOMER["Customer"]
-        U1["Create Booking"]
+    subgraph SYSTEM["System"]
+        S1["Booking Event"]
     end
 
-    subgraph FRONTEND["Frontend React"]
-        F1["Validate Request"]
-        F2["Call Booking API"]
-        F3["Display Booking Status"]
+    subgraph EVENT["Event Dispatcher"]
+        E1["Create Notification"]
     end
 
-    subgraph API["Booking API"]
-        A1["Validate Booking"]
-        A2["Create Booking"]
-        A3["Save Booking"]
-        A4["Trigger Matching"]
+    subgraph NOTI["Notification Service"]
+        N1["Save Notification"]
+        N2["Send Push"]
     end
 
     subgraph DB["PostgreSQL"]
-        D1["Bookings Table"]
+        D1["notifications"]
     end
 
-    U1 --> F1
+    subgraph FCM["Firebase"]
+        F1["Push Delivery"]
+    end
+
+    subgraph USER["User"]
+        U1["Receive Notification"]
+    end
+
+    S1 --> E1
+
+    E1 --> N1
+    E1 --> N2
+
+    N1 --> D1
+
+    N2 --> F1
+
+    F1 --> U1
+7. Swimlane – Booking Timeline
+flowchart LR
+
+    subgraph WORKER["Worker"]
+        W1["Update Booking Status"]
+    end
+
+    subgraph API["Booking API"]
+        A1["Update Booking"]
+        A2["Create Timeline Event"]
+    end
+
+    subgraph DB["Database"]
+        D1["bookings"]
+        D2["booking_events"]
+    end
+
+    subgraph CUSTOMER["Customer"]
+        C1["View Timeline"]
+    end
+
+    W1 --> A1
+
+    A1 --> D1
+
+    A1 --> A2
+
+    A2 --> D2
+
+    D2 --> C1
+8. Swimlane – Review Submission
+flowchart LR
+
+    subgraph CUSTOMER["Customer"]
+        C1["Submit Review"]
+    end
+
+    subgraph FRONTEND["Frontend"]
+        F1["Validate Review"]
+        F2["Call Review API"]
+    end
+
+    subgraph API["Review API"]
+        A1["Validate Booking"]
+        A2["Save Review"]
+        A3["Update Rating"]
+    end
+
+    subgraph DB["Database"]
+        D1["worker_reviews"]
+        D2["worker_profiles"]
+    end
+
+    C1 --> F1
+
     F1 --> F2
 
     F2 --> A1
     A1 --> A2
     A2 --> A3
 
-    A3 --> D1
-
-    A3 --> A4
-
-    A4 --> F3
-4. Swimlane – Worker Matching
-flowchart LR
-
-    subgraph SYSTEM["System"]
-        S1["Booking Created"]
-    end
-
-    subgraph MATCHING["Matching Service"]
-        M1["Get Customer GPS"]
-        M2["Find Nearby Workers"]
-        M3["Filter Available Workers"]
-        M4["Sort By Distance"]
-        M5["Send Notifications"]
-    end
-
-    subgraph DB["PostGIS"]
-        D1["Worker Locations"]
-    end
-
-    subgraph WORKER["Worker"]
-        W1["Receive Job"]
-    end
-
-    S1 --> M1
-    M1 --> M2
-
-    M2 --> D1
-
-    D1 --> M3
-    M3 --> M4
-    M4 --> M5
-
-    M5 --> W1
-5. Swimlane – Worker Accept Booking
-flowchart LR
-
-    subgraph WORKER["Worker"]
-        W1["Open Job"]
-        W2["Accept Job"]
-    end
-
-    subgraph FRONTEND["Worker App"]
-        F1["Call Accept API"]
-        F2["Show Assignment"]
-    end
-
-    subgraph API["Booking API"]
-        A1["Validate Booking"]
-        A2["Check Status"]
-        A3["Assign Worker"]
-        A4["Update Booking"]
-    end
-
-    subgraph DB["PostgreSQL"]
-        D1["Bookings"]
-    end
-
-    W1 --> W2
-
-    W2 --> F1
-
-    F1 --> A1
-    A1 --> A2
-    A2 --> A3
-    A3 --> A4
-
-    A4 --> D1
-
-    A4 --> F2
-6. Sequence Diagram – Create Booking
-7. Sequence Diagram – Nearby Worker Search
-8. Sequence Diagram – Worker Accept Booking
-9. Sequence Diagram – Booking Status Update
+    A2 --> D1
+    A3 --> D2
+9. Sequence Diagram – Push Notification
 sequenceDiagram
 
-    actor Worker
+    participant BookingService
+    participant NotificationService
+    participant Database
+    participant Firebase
+    participant User
+
+    BookingService->>NotificationService: BOOKING_ACCEPTED event
+
+    NotificationService->>Database: Save notification
+
+    Database-->>NotificationService: Saved
+
+    NotificationService->>Firebase: Send push notification
+
+    Firebase-->>User: Push delivered
+10. Sequence Diagram – Booking Timeline
+11. Sequence Diagram – Review & Rating
+sequenceDiagram
+
+    actor Customer
 
     participant Frontend
-    participant BookingAPI
-    participant BookingService
+    participant ReviewAPI
+    participant ReviewService
     participant Database
 
-    Worker->>Frontend: Update booking status
+    Customer->>Frontend: Submit review
 
-    Frontend->>BookingAPI: PATCH /bookings/{id}/status
+    Frontend->>ReviewAPI: POST /reviews
 
-    BookingAPI->>BookingService: Validate transition
+    ReviewAPI->>ReviewService: Validate completed booking
 
-    BookingService->>Database: Update status
+    ReviewService->>Database: Save review
 
-    Database-->>BookingService: Updated
+    ReviewService->>Database: Update worker rating
 
-    BookingService-->>BookingAPI: Success
+    Database-->>ReviewService: Updated
 
-    BookingAPI-->>Frontend: Updated
-10. Booking State Diagram
+    ReviewService-->>ReviewAPI: Success
+
+    ReviewAPI-->>Frontend: Review submitted
+12. Notification State Diagram
 stateDiagram-v2
 
-    [*] --> PENDING
+    [*] --> CREATED
 
-    PENDING --> MATCHING
+    CREATED --> SENT
 
-    MATCHING --> ASSIGNED
+    SENT --> DELIVERED
 
-    ASSIGNED --> ON_THE_WAY
+    DELIVERED --> READ
+
+    SENT --> FAILED
+13. Booking Timeline State Diagram
+stateDiagram-v2
+
+    [*] --> BOOKING_CREATED
+
+    BOOKING_CREATED --> WORKER_MATCHED
+
+    WORKER_MATCHED --> WORKER_ACCEPTED
+
+    WORKER_ACCEPTED --> ON_THE_WAY
 
     ON_THE_WAY --> WORKING
 
     WORKING --> COMPLETED
 
-    PENDING --> CANCELLED
+    BOOKING_CREATED --> CANCELLED
 
-    ASSIGNED --> CANCELLED
-11. Worker Matching Architecture
+    WORKER_ACCEPTED --> CANCELLED
+14. Notification Architecture
 flowchart TB
 
-    CUSTOMER["Customer"]
+    BOOKING["Booking Module"]
 
-    FRONTEND["React Frontend"]
+    WORKER["Worker Module"]
 
-    BOOKINGAPI["Booking API"]
+    REVIEW["Review Module"]
 
-    MATCHING["Worker Matching Service"]
+    EVENTS["Event Dispatcher"]
 
-    POSTGIS["PostGIS"]
-
-    REDIS["Redis"]
+    NOTI["Notification Service"]
 
     FCM["Firebase FCM"]
 
-    WORKER["Worker"]
+    DB["PostgreSQL"]
 
-    CUSTOMER --> FRONTEND
+    CLIENT["React Client"]
 
-    FRONTEND --> BOOKINGAPI
+    BOOKING --> EVENTS
+    WORKER --> EVENTS
+    REVIEW --> EVENTS
 
-    BOOKINGAPI --> MATCHING
+    EVENTS --> NOTI
 
-    MATCHING --> POSTGIS
+    NOTI --> DB
 
-    MATCHING --> REDIS
+    NOTI --> FCM
 
-    MATCHING --> FCM
-
-    FCM --> WORKER
-12. Booking API Contract
-Create Booking
-POST /api/v1/bookings
-
-Request:
-
-{
-  "serviceId": "uuid",
-  "address": "Hoan Kiem, Ha Noi",
-  "lat": 21.0285,
-  "lng": 105.8542,
-  "description": "Điều hòa không lạnh"
-}
+    FCM --> CLIENT
+15. Notification API Contract
+Get Notifications
+GET /api/v1/notifications
 
 Response:
 
-{
-  "bookingId": "uuid",
-  "status": "MATCHING"
-}
-Get Booking Detail
-GET /api/v1/bookings/{id}
-Cancel Booking
-PATCH /api/v1/bookings/{id}/cancel
-Worker Accept Booking
-POST /api/v1/bookings/{id}/accept
-Worker Reject Booking
-POST /api/v1/bookings/{id}/reject
-Update Booking Status
-PATCH /api/v1/bookings/{id}/status
+[
+  {
+    "id": "uuid",
+    "title": "Worker accepted your booking",
+    "type": "BOOKING_ACCEPTED",
+    "isRead": false,
+    "createdAt": "2026-05-09T10:00:00"
+  }
+]
+Mark Notification Read
+PATCH /api/v1/notifications/{id}/read
+16. Booking Timeline API Contract
+Get Booking Timeline
+GET /api/v1/bookings/{id}/timeline
+
+Response:
+
+[
+  {
+    "eventType": "BOOKING_CREATED",
+    "createdAt": "2026-05-09T10:00:00"
+  },
+  {
+    "eventType": "WORKER_ACCEPTED",
+    "createdAt": "2026-05-09T10:05:00"
+  }
+]
+Get Booking History
+GET /api/v1/my-bookings
+17. Review API Contract
+Submit Review
+POST /api/v1/reviews
 
 Request:
 
-
 {
-  "status": "ON_THE_WAY"
+  "bookingId": "uuid",
+  "rating": 5,
+  "comment": "Worker arrived quickly and fixed the issue."
 }
-13. Database Design
-bookings
+Get Worker Reviews
+GET /api/v1/workers/{id}/reviews
+18. Database Design
+notifications
 Column	Type
 id	UUID
+user_id	UUID
+title	varchar
+content	text
+type	varchar
+is_read	boolean
+created_at	timestamp
+booking_events
+Column	Type
+id	UUID
+booking_id	UUID
+event_type	varchar
+metadata	jsonb
+created_at	timestamp
+worker_reviews
+Column	Type
+id	UUID
+booking_id	UUID
 customer_id	UUID
 worker_id	UUID
-service_id	UUID
-status	varchar
-address	text
-lat	decimal
-lng	decimal
-location	geography(Point)
-description	text
+rating	int
+comment	text
 created_at	timestamp
-booking_status_histories
-Column	Type
-id	UUID
-booking_id	UUID
-old_status	varchar
-new_status	varchar
-updated_by	UUID
-created_at	timestamp
-worker_locations
+worker_rating_summaries
 Column	Type
 worker_id	UUID
-location	geography(Point)
+average_rating	numeric
+total_reviews	int
 updated_at	timestamp
-booking_matching_logs
-Column	Type
-id	UUID
-booking_id	UUID
-worker_id	UUID
-distance	numeric
-status	varchar
-created_at	timestamp
-14. Geo Query Design
-Nearby Search
-SELECT *
-FROM worker_locations
-WHERE ST_DWithin(
-    location,
-    ST_MakePoint(:lng, :lat)::geography,
-    5000
-)
-ORDER BY ST_Distance(
-    location,
-    ST_MakePoint(:lng, :lat)::geography
-)
-LIMIT 20;
-15. Booking Security Design
+19. Review Aggregation Logic
+UPDATE worker_rating_summaries
+SET
+    average_rating = (
+        SELECT AVG(rating)
+        FROM worker_reviews
+        WHERE worker_id = :workerId
+    ),
+    total_reviews = (
+        SELECT COUNT(*)
+        FROM worker_reviews
+        WHERE worker_id = :workerId
+    )
+WHERE worker_id = :workerId;
+20. Notification Security Design
 Security	Solution
-Authentication	JWT
-Authorization	Role-based
-Geo validation	GPS validation
-Booking ownership	Customer-only access
-Worker assignment	Single assignment lock
-Rate limit	Redis
-API security	HTTPS
-16. Recommended Tech Stack
-Frontend
+Notification ownership	User-only access
+Review validation	Completed booking only
+Spam review prevention	One review per booking
+Push token validation	Firebase token check
+Timeline ownership	Customer/worker access only
+21. UX/UI Flows
+Notification Flow
+flowchart TD
+
+    EVENT["Booking Event"]
+
+    PUSH["Push Notification"]
+
+    CENTER["Notification Center"]
+
+    DETAIL["Open Booking Detail"]
+
+    EVENT --> PUSH
+
+    PUSH --> CENTER
+
+    CENTER --> DETAIL
+Booking Timeline UI
+flowchart TD
+
+    DETAIL["Booking Detail"]
+
+    TIMELINE["Booking Timeline"]
+
+    STATUS["Current Status"]
+
+    COMPLETE["Completed"]
+
+    DETAIL --> TIMELINE
+
+    TIMELINE --> STATUS
+
+    STATUS --> COMPLETE
+Review Submission UI
+flowchart TD
+
+    COMPLETE["Booking Completed"]
+
+    RATING["Choose Rating"]
+
+    COMMENT["Write Comment"]
+
+    SUBMIT["Submit Review"]
+
+    COMPLETE --> RATING
+
+    RATING --> COMMENT
+
+    COMMENT --> SUBMIT
+22. Recommended Frontend Stack
 Feature	Tech
-Booking State	Zustand
-API	Axios
-Map	React Leaflet
-GPS	Browser Geolocation
-Notification	Firebase
-Backend
+Push Notification	Firebase
+Notification Center	Zustand
+Timeline UI	Ant Design Timeline
+Review Form	React Hook Form
+Rating UI	Ant Design Rate
+Polling	React Query
+23. Recommended Backend Stack
+Spring Boot
+Firebase Admin SDK
+Spring Scheduler
+Redis (optional)
+PostgreSQL
+
+OR
 
 ASP.NET Core
-EF Core
-NetTopologySuite
-Redis
 Firebase Admin SDK
-17. MVP Booking Priorities
+BackgroundService
+PostgreSQL
+24. MVP Priorities
 Priority	Feature
-P0	Create Booking
-P0	Nearby Worker Search
-P0	Worker Matching
-P0	Accept Booking
-P0	Booking Workflow
-P0	Notification
-P1	Realtime Tracking
-P1	Multi-worker bidding
-P2	AI Matching
-P2	Dynamic Pricing
+P2	Push Notification
+P2	In-app Notification
+P2	Booking Timeline
+P2	Booking History
+P2	Review Submission
+P2	Worker Ratings
+P2	Notification Center
+P3	Email Notifications
+P3	SMS
+P3	Smart Notification Rules

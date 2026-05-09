@@ -10,16 +10,30 @@ import CustomerLayout from './layouts/CustomerLayout';
 import CustomerHome from './pages/customer/Home';
 import CreateBooking from './pages/customer/CreateBooking';
 import BookingsList from './pages/customer/BookingsList';
+import CustomerProfile from './pages/customer/CustomerProfile';
 
 // Worker Pages
 import WorkerLayout from './layouts/WorkerLayout';
 import WorkerDashboard from './pages/worker/Dashboard';
 import WorkerKYC from './pages/worker/WorkerKYC';
 import WorkerProfile from './pages/worker/WorkerProfile';
+import WorkerBookingsList from './pages/worker/WorkerBookingsList';
+import CreateQuotation from './pages/worker/CreateQuotation';
+import WalletDashboard from './pages/worker/WalletDashboard';
 
-// Admin Pages
+// Shared Pages
+import NotificationsList from './pages/shared/NotificationsList';
+import BookingDetail from './pages/shared/BookingDetail';
+import PaymentReturn from './pages/shared/PaymentReturn';
+import ChatRoom from './pages/shared/ChatRoom';
+import CreateDispute from './pages/shared/CreateDispute';
+
 import AdminLayout from './layouts/AdminLayout';
 import AdminKYC from './pages/admin/AdminKYC';
+import WorkersManagement from './pages/admin/WorkersManagement';
+import DisputeManagement from './pages/admin/DisputeManagement';
+import AdminDisputeDetail from './pages/admin/AdminDisputeDetail';
+import AdminDashboard from './pages/admin/AdminDashboard';
 
 function App() {
   return (
@@ -34,29 +48,41 @@ function App() {
           <Route element={<CustomerLayout />}>
             <Route path="/" element={<CustomerHome />} />
             <Route path="/customer/bookings" element={<BookingsList />} />
-            <Route path="/customer/notifications" element={<div>Notifications</div>} />
-            <Route path="/customer/profile" element={<div>Profile</div>} />
+            <Route path="/customer/bookings/:id" element={<BookingDetail />} />
+            <Route path="/customer/notifications" element={<NotificationsList />} />
+            <Route path="/customer/profile" element={<CustomerProfile />} />
           </Route>
           {/* Create Booking is full screen, outside bottom nav layout */}
           <Route path="/customer/booking/create" element={<CreateBooking />} />
+          <Route path="/payment/result" element={<PaymentReturn />} />
+          <Route path="/bookings/:id/chat" element={<ChatRoom />} />
+          <Route path="/customer/bookings/:id/dispute" element={<CreateDispute />} />
         </Route>
 
         {/* Worker Routes */}
         <Route element={<ProtectedRoute allowedRoles={['WORKER']} />}>
           <Route element={<WorkerLayout />}>
             <Route path="/worker" element={<WorkerDashboard />} />
-            <Route path="/worker/bookings" element={<div>Worker Bookings</div>} />
+            <Route path="/worker/bookings" element={<WorkerBookingsList />} />
+            <Route path="/worker/bookings/:id" element={<BookingDetail />} />
+            <Route path="/worker/notifications" element={<NotificationsList />} />
             <Route path="/worker/kyc" element={<WorkerKYC />} />
             <Route path="/worker/profile" element={<WorkerProfile />} />
           </Route>
+          {/* Full screen pages */}
+          <Route path="/worker/bookings/:id/quotation/create" element={<CreateQuotation />} />
+          <Route path="/worker/wallet" element={<WalletDashboard />} />
+          <Route path="/bookings/:id/chat" element={<ChatRoom />} />
         </Route>
 
         {/* Admin Routes */}
         <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
           <Route element={<AdminLayout />}>
-            <Route path="/admin" element={<div className="p-8 text-2xl font-bold">Admin Dashboard Overview</div>} />
+            <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/kyc" element={<AdminKYC />} />
-            <Route path="/admin/workers" element={<div className="p-8 text-2xl font-bold">Workers Management</div>} />
+            <Route path="/admin/workers" element={<WorkersManagement />} />
+            <Route path="/admin/disputes" element={<DisputeManagement />} />
+            <Route path="/admin/disputes/:id" element={<AdminDisputeDetail />} />
             <Route path="/admin/settings" element={<div className="p-8 text-2xl font-bold">Settings</div>} />
           </Route>
         </Route>

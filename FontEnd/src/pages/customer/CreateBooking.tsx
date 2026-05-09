@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, MapPin, Wrench, Clock, FileText } from 'lucide-react';
+import { ArrowLeft, MapPin, Wrench, Clock, FileText, Navigation, Loader2 } from 'lucide-react';
 import { message } from 'antd';
 import axiosInstance from '../../utils/axiosInstance';
 
@@ -12,24 +12,23 @@ const bookingSchema = z.object({
   address: z.string().min(5, 'Địa chỉ chi tiết không được để trống'),
   lat: z.number(),
   lng: z.number(),
-  notes: z.string().optional(),
+  description: z.string().optional(),
 });
 
 type BookingForm = z.infer<typeof bookingSchema>;
 
-// Mock services
-const SERVICES = [
-  { id: '1', name: 'Sửa điện', icon: '⚡' },
-  { id: '2', name: 'Sửa nước', icon: '💧' },
-  { id: '3', name: 'Sửa điều hoà', icon: '❄️' },
-  { id: '4', name: 'Sửa khoá', icon: '🔑' },
-];
+interface Service {
+  id: string;
+  name: string;
+  iconUrl?: string;
+}
 
 export default function CreateBooking() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [services, setServices] = useState<Service[]>([]);
+  const [locating, setLocating] = useState(false);
 
-  // In real app, lat lng comes from Geolocation/Map Picker
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<BookingForm>({
     resolver: zodResolver(bookingSchema),
     defaultValues: {
@@ -38,19 +37,68 @@ export default function CreateBooking() {
     }
   });
 
+  useEffect(() => {
+    // Fetch real services from database
+    const fetchServices = async () => {
+      try {
+        const res = await axiosInstance.get('/services');
+        setServices(res.data);
+      } catch (err) {
+        console.error('Failed to fetch services', err);
+      }
+    };
+    fetchServices();
+  }, []);
+
+  const handleGetCurrentLocation = () => {
+    setLocating(true);
+    if (!navigator.geolocation) {
+      message.error('Trình duyệt không hỗ trợ lấy vị trí.');
+      setLocating(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        setValue('lat', lat);
+        setValue('lng', lng);
+        
+        // Reverse geocoding optional API
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+          const data = await res.json();
+          if (data.display_name) {
+            setValue('address', data.display_name);
+          }
+        } catch {
+          setValue('address', `${lat}, ${lng}`); // Fallback
+        }
+        
+        message.success('Đã lấy vị trí hiện tại');
+        setLocating(false);
+      },
+      (error) => {
+        console.error(error);
+        message.error('Không thể lấy vị trí. Hãy chắc chắn bạn đã cấp quyền cho trình duyệt.');
+        setLocating(false);
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
+  };
+
   const selectedService = watch('serviceId');
 
   const onSubmit = async (data: BookingForm) => {
     setLoading(true);
     try {
-      // Assuming your backend uses exact UUIDs, you'll need real service IDs here
-      // For MVP demo, if backend throws 400 because '1' is not UUID, we handle it
       await axiosInstance.post('/bookings', data);
       message.success('Đặt thợ thành công! Đang tìm thợ gần bạn...');
       navigate('/customer/bookings');
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      message.error(error?.response?.data?.message || 'Có lỗi xảy ra khi đặt thợ');
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.message || 'Có lỗi xảy ra khi đặt thợ';
+      message.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -76,7 +124,7 @@ export default function CreateBooking() {
               <h2>Chọn dịch vụ</h2>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              {SERVICES.map((srv) => (
+              {services.map((srv) => (
                 <div 
                   key={srv.id}
                   onClick={() => setValue('serviceId', srv.id, { shouldValidate: true })}
@@ -86,7 +134,7 @@ export default function CreateBooking() {
                       : 'border-gray-100 bg-gray-50 hover:border-gray-200'
                   }`}
                 >
-                  <span className="text-xl">{srv.icon}</span>
+                  <span className="text-xl">{srv.iconUrl ? <img src={srv.iconUrl} alt={srv.name} className="w-6 h-6 rounded-full" /> : '⚡'}</span>
                   <span className="text-sm font-semibold text-gray-700">{srv.name}</span>
                 </div>
               ))}
@@ -96,9 +144,19 @@ export default function CreateBooking() {
 
           {/* Location details */}
           <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
-            <div className="flex items-center gap-2 mb-4 text-gray-900 font-bold">
-              <MapPin className="w-5 h-5 text-orange-500" />
-              <h2>Địa chỉ sửa chữa</h2>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2 text-gray-900 font-bold">
+                <MapPin className="w-5 h-5 text-orange-500" />
+                <h2>Địa chỉ sửa chữa</h2>
+              </div>
+              <button 
+                type="button" 
+                onClick={handleGetCurrentLocation}
+                disabled={locating}
+                className="text-xs bg-orange-100 text-orange-600 px-3 py-1.5 rounded-full font-semibold flex items-center gap-1"
+              >
+                {locating ? <Loader2 className="w-3 h-3 animate-spin"/> : <Navigation className="w-3 h-3" />} Lấy vị trí
+              </button>
             </div>
             <textarea
               {...register('address')}
@@ -121,7 +179,7 @@ export default function CreateBooking() {
               <h2>Mô tả tình trạng (Tuỳ chọn)</h2>
             </div>
             <textarea
-              {...register('notes')}
+              {...register('description')}
               placeholder="Ví dụ: Nước rò rỉ mạnh ở bồn rửa mặt..."
               rows={3}
               className="w-full bg-gray-50 rounded-2xl border-none px-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-orange-500/50 resize-none"

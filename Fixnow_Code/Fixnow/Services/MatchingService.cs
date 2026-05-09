@@ -14,17 +14,20 @@ public class MatchingService : IMatchingService
   private readonly IWorkerLocationRepository _workerLocationRepo;
   private readonly IBookingMatchingLogRepository _matchingLogRepo;
   private readonly INotificationService _notificationService;
+  private readonly IBookingStatusHistoryRepository _historyRepo;
 
   public MatchingService(
     IBookingRepository bookingRepo,
     IWorkerLocationRepository workerLocationRepo,
     IBookingMatchingLogRepository matchingLogRepo,
-    INotificationService notificationService)
+    INotificationService notificationService,
+    IBookingStatusHistoryRepository historyRepo)
   {
     _bookingRepo = bookingRepo;
     _workerLocationRepo = workerLocationRepo;
     _matchingLogRepo = matchingLogRepo;
     _notificationService = notificationService;
+    _historyRepo = historyRepo;
   }
 
   /// <inheritdoc/>
@@ -33,6 +36,8 @@ public class MatchingService : IMatchingService
     var booking = await _bookingRepo.FindByIdWithDetailsAsync(bookingId)
       ?? throw new KeyNotFoundException($"Booking {bookingId} not found.");
 
+    var oldStatus = booking.Status;
+
     // Find nearby available workers within 5km, matching the requested ServiceId
     var nearbyWorkers = await _workerLocationRepo.FindNearbyAvailableWorkersAsync(
       booking.Lat, booking.Lng, booking.ServiceId, radiusMeters: 5000, limit: 20);
@@ -40,6 +45,16 @@ public class MatchingService : IMatchingService
     // Update booking status to MATCHING (even if no workers found yet)
     booking.Status = BookingStatus.MATCHING;
     await _bookingRepo.UpdateAsync(booking);
+
+    // Log status history (system updated, so we use Guid.Empty or a System user ID if available)
+    await _historyRepo.AddAsync(new BookingStatusHistory
+    {
+      BookingId = bookingId,
+      OldStatus = oldStatus,
+      NewStatus = BookingStatus.MATCHING,
+      UpdatedBy = Guid.Empty, // System
+      CreatedAt = DateTime.UtcNow
+    });
 
     if (nearbyWorkers.Count == 0)
       return;

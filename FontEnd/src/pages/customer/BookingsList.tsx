@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Clock, CheckCircle, MapPin, Search } from 'lucide-react';
+import { Clock, CheckCircle, MapPin, Search, ChevronRight } from 'lucide-react';
 import axiosInstance from '../../utils/axiosInstance';
 import { clsx } from 'clsx';
+import { useNavigate } from 'react-router-dom';
 
 interface Booking {
   id: string;
@@ -10,11 +11,13 @@ interface Booking {
   address: string;
   createdAt: string;
   totalPrice?: number;
+  serviceName?: string;
 }
 
 export default function BookingsList() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchBookings();
@@ -73,26 +76,35 @@ export default function BookingsList() {
         ) : (
           <div className="space-y-4">
             {bookings.map((booking) => (
-              <div key={booking.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+              <div 
+                key={booking.id} 
+                onClick={() => navigate(`/customer/bookings/${booking.id}`)}
+                className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 active:scale-[0.98] transition-all cursor-pointer"
+              >
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <h3 className="font-bold text-gray-900">Mã: #{booking.id.split('-')[0]}</h3>
+                    <h3 className="font-bold text-gray-900">#{booking.id.split('-')[0]}</h3>
                     <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
                       <Clock className="w-3.5 h-3.5" />
                       {new Date(booking.createdAt).toLocaleString('vi-VN')}
                     </div>
                   </div>
-                  <span className={clsx(
-                    'px-2.5 py-1 rounded-lg text-xs font-semibold border',
-                    getStatusColor(booking.status)
-                  )}>
-                    {booking.status}
-                  </span>
+                  <div className="flex flex-col items-end gap-2">
+                    <span className={clsx(
+                      'px-2.5 py-1 rounded-lg text-[10px] font-bold border',
+                      getStatusColor(booking.status)
+                    )}>
+                      {booking.status}
+                    </span>
+                  </div>
                 </div>
                 
-                <div className="flex items-start gap-2 mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded-xl">
-                  <MapPin className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
-                  <p className="line-clamp-2">{booking.address}</p>
+                <div className="flex items-center justify-between mt-4 bg-gray-50 p-3 rounded-xl">
+                  <div className="flex items-start gap-2 text-xs text-gray-600">
+                    <MapPin className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                    <p className="line-clamp-1">{booking.address}</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-300" />
                 </div>
               </div>
             ))}

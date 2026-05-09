@@ -1,27 +1,37 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { User, Briefcase, Wrench, Save } from 'lucide-react';
+import { User, Briefcase, Wrench, Save, Star, MessageSquare, LogOut } from 'lucide-react';
 import { message } from 'antd';
 import axiosInstance from '../../utils/axiosInstance';
 import { useAuthStore } from '../../stores/authStore';
+import { clsx } from 'clsx';
+import { useNavigate } from 'react-router-dom';
+import { authApi } from '../../modules/auth/authApi';
 
-const SERVICES = [
-  { id: '1', name: 'Sửa điện', icon: '⚡' },
-  { id: '2', name: 'Sửa nước', icon: '💧' },
-  { id: '3', name: 'Sửa điều hoà', icon: '❄️' },
-  { id: '4', name: 'Sửa khoá', icon: '🔑' },
-];
+interface Review {
+  id: string;
+  customerName: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
 
 export default function WorkerProfile() {
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [availableServices, setAvailableServices] = useState<{id: string, name: string, iconUrl?: string}[]>([]);
+  const [ratingSummary, setRatingSummary] = useState({ averageRating: 0, totalReviews: 0 });
+  const [reviews, setReviews] = useState<Review[]>([]);
   const { register, handleSubmit, setValue } = useForm();
 
   useEffect(() => {
-    // Fetch current profile
     const fetchProfile = async () => {
       try {
+        const srvRes = await axiosInstance.get('/services');
+        setAvailableServices(srvRes.data);
+
         const res = await axiosInstance.get('/workers/profile');
         if (res.data) {
           setValue('bio', res.data.bio);
@@ -29,13 +39,30 @@ export default function WorkerProfile() {
           if (res.data.skills) {
             setSelectedSkills(res.data.skills.map((s: any) => s.serviceId));
           }
+          if (user?.id) {
+            fetchReviews(user.id);
+          }
         }
       } catch (err) {
-        // First time visiting profile
+        // First time
       }
     };
+    
+    const fetchReviews = async (workerId: string) => {
+      try {
+        const [summaryRes, reviewsRes] = await Promise.all([
+          axiosInstance.get(`/reviews/workers/${workerId}/summary`),
+          axiosInstance.get(`/reviews/workers/${workerId}`)
+        ]);
+        setRatingSummary(summaryRes.data);
+        setReviews(reviewsRes.data);
+      } catch (err) {
+        console.error('Lỗi tải đánh giá');
+      }
+    };
+
     fetchProfile();
-  }, [setValue]);
+  }, [setValue, user?.id]);
 
   const toggleSkill = (id: string) => {
     setSelectedSkills(prev => 
@@ -46,22 +73,29 @@ export default function WorkerProfile() {
   const onSubmit = async (data: any) => {
     setLoading(true);
     try {
-      // 1. Update Profile Info
       await axiosInstance.post('/workers/profile', {
         bio: data.bio,
         experienceYears: parseInt(data.experienceYears) || 0
       });
-
-      // 2. Update Skills
       await axiosInstance.post('/workers/profile/skills', {
         serviceIds: selectedSkills
       });
-
       message.success('Cập nhật hồ sơ thành công!');
     } catch (err) {
       message.error('Có lỗi xảy ra khi cập nhật');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+        await authApi.logout();
+    } catch (error) {
+        console.error('Logout error', error);
+    } finally {
+        logout();
+        navigate('/login');
     }
   };
 
@@ -73,13 +107,28 @@ export default function WorkerProfile() {
       </div>
 
       <div className="flex-1 p-6 overflow-y-auto pb-24">
-        <div className="flex items-center gap-4 bg-white p-5 rounded-3xl shadow-sm border border-gray-100 mb-6">
-          <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 font-bold text-2xl">
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 mb-6 flex flex-col items-center">
+          <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 font-bold text-3xl mb-4">
             {user?.fullName.charAt(0)}
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">{user?.fullName}</h2>
-            <p className="text-gray-500 text-sm">{user?.email}</p>
+          <h2 className="text-xl font-bold text-gray-900">{user?.fullName}</h2>
+          <p className="text-gray-500 text-sm mb-4">{user?.email}</p>
+          
+          <div className="flex items-center gap-6 w-full pt-4 border-t border-gray-50">
+            <div className="flex-1 text-center">
+              <div className="flex items-center justify-center gap-1 text-orange-500 font-bold text-lg">
+                <Star className="w-5 h-5 fill-current" />
+                {ratingSummary.averageRating.toFixed(1)}
+              </div>
+              <p className="text-[10px] text-gray-400 font-bold uppercase">Điểm đánh giá</p>
+            </div>
+            <div className="w-px h-8 bg-gray-100"></div>
+            <div className="flex-1 text-center">
+              <div className="text-gray-900 font-bold text-lg">
+                {ratingSummary.totalReviews}
+              </div>
+              <p className="text-[10px] text-gray-400 font-bold uppercase">Nhận xét</p>
+            </div>
           </div>
         </div>
 
@@ -120,17 +169,18 @@ export default function WorkerProfile() {
             <p className="text-xs text-gray-500 mb-4">Hệ thống sẽ chỉ phát đơn phù hợp với kỹ năng bạn chọn.</p>
             
             <div className="grid grid-cols-2 gap-3">
-              {SERVICES.map(srv => (
+              {availableServices.map(srv => (
                 <div 
                   key={srv.id}
                   onClick={() => toggleSkill(srv.id)}
-                  className={`flex flex-col items-center p-3 rounded-xl border-2 transition-all cursor-pointer ${
+                  className={clsx(
+                    "flex flex-col items-center p-3 rounded-xl border-2 transition-all cursor-pointer",
                     selectedSkills.includes(srv.id)
-                      ? 'border-orange-500 bg-orange-50 text-orange-700'
-                      : 'border-gray-100 bg-gray-50 text-gray-600'
-                  }`}
+                      ? "border-orange-500 bg-orange-50 text-orange-700"
+                      : "border-gray-100 bg-gray-50 text-gray-600"
+                  )}
                 >
-                  <span className="text-2xl mb-1">{srv.icon}</span>
+                  <span className="text-2xl mb-1">{srv.iconUrl ? <img src={srv.iconUrl} alt={srv.name} className="w-8 h-8 rounded-full" /> : '⚡'}</span>
                   <span className="text-xs font-semibold">{srv.name}</span>
                 </div>
               ))}
@@ -149,6 +199,55 @@ export default function WorkerProfile() {
             )}
           </button>
         </form>
+
+        <div className="mt-8">
+          <h3 className="flex items-center gap-2 font-bold text-gray-900 mb-4 px-2">
+            <MessageSquare className="w-5 h-5 text-orange-500" /> Đánh giá từ khách hàng
+          </h3>
+          
+          {reviews.length === 0 ? (
+            <div className="bg-white p-8 rounded-3xl border border-dashed border-gray-200 text-center text-gray-400">
+              <Star className="w-10 h-10 mx-auto mb-2 opacity-20" />
+              <p className="text-sm">Chưa có đánh giá nào</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {reviews.map(review => (
+                <div key={review.id} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 font-bold text-xs">
+                        {review.customerName.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-gray-900">{review.customerName}</p>
+                        <p className="text-[10px] text-gray-400">{new Date(review.createdAt).toLocaleDateString('vi-VN')}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-0.5 text-orange-500">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className={clsx("w-3 h-3", i < review.rating ? "fill-current" : "text-gray-200")} />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-2 italic">"{review.comment}"</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Nút đăng xuất */}
+        <div className="mt-8 mb-6">
+          <button 
+              onClick={handleLogout}
+              className="w-full bg-white border border-red-200 text-red-600 font-semibold py-3.5 rounded-xl shadow-sm flex justify-center items-center gap-2 hover:bg-red-50 transition-colors"
+          >
+              <LogOut size={20} />
+              Đăng xuất
+          </button>
+        </div>
+        
       </div>
     </div>
   );

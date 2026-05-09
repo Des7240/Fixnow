@@ -13,10 +13,36 @@ namespace Fixnow.Controllers;
 public class AdminController : ControllerBase
 {
   private readonly IAdminService _adminService;
+  private readonly IAuditService _auditService;
 
-  public AdminController(IAdminService adminService)
+  public AdminController(IAdminService adminService, IAuditService auditService)
   {
     _adminService = adminService;
+    _auditService = auditService;
+  }
+
+  [HttpGet("dashboard")]
+  [ProducesResponseType(typeof(DashboardSummaryDto), StatusCodes.Status200OK)]
+  public async Task<IActionResult> GetDashboardSummary()
+  {
+    var result = await _adminService.GetDashboardSummaryAsync();
+    return Ok(result);
+  }
+
+  [HttpGet("kyc")]
+  [ProducesResponseType(typeof(List<KycResponseDto>), StatusCodes.Status200OK)]
+  public async Task<IActionResult> GetAllKycs()
+  {
+    var result = await _adminService.GetAllKycsAsync();
+    return Ok(result);
+  }
+
+  [HttpGet("workers")]
+  [ProducesResponseType(typeof(List<UserDto>), StatusCodes.Status200OK)]
+  public async Task<IActionResult> GetAllWorkers()
+  {
+    var result = await _adminService.GetAllWorkersAsync();
+    return Ok(result);
   }
 
   [HttpPatch("kyc/{id:guid}")]
@@ -33,6 +59,14 @@ public class AdminController : ControllerBase
   {
     await _adminService.SuspendWorkerAsync(id, GetCurrentUserId());
     return NoContent();
+  }
+
+  [HttpGet("audit-logs")]
+  [ProducesResponseType(typeof(List<AuditLogDto>), StatusCodes.Status200OK)]
+  public async Task<IActionResult> GetAuditLogs()
+  {
+    var logs = await _auditService.GetRecentAuditLogsAsync();
+    return Ok(logs);
   }
 
   private Guid GetCurrentUserId()

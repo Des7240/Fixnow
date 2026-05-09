@@ -2,7 +2,7 @@ import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
 
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:5000/api/v1', // Update port if your backend runs on a different port
+  baseURL: 'https://localhost:7154/api/v1', // Update port if your backend runs on a different port
   timeout: 10000,
 });
 
@@ -27,7 +27,7 @@ axiosInstance.interceptors.response.use(
       try {
         // Attempt to refresh token
         const response = await axios.post(
-          'http://localhost:5000/api/v1/auth/refresh',
+          'https://localhost:7154/api/v1/auth/refresh',
           {},
           { withCredentials: true } // Send httpOnly cookie
         );

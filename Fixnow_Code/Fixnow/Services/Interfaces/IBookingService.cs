@@ -11,6 +11,7 @@ public interface IBookingService
   Task<BookingResponseDto> CreateBookingAsync(CreateBookingRequestDto request, Guid customerId);
   Task<BookingResponseDto> GetBookingAsync(Guid id, Guid requesterId);
   Task<List<BookingResponseDto>> GetMyBookingsAsync(Guid userId, UserRole role);
+  Task<List<BookingResponseDto>> GetMatchingBookingsAsync(Guid workerId);
   Task<BookingResponseDto> AcceptBookingAsync(Guid bookingId, Guid workerId);
   Task<BookingResponseDto> RejectBookingAsync(Guid bookingId, Guid workerId);
   Task<BookingResponseDto> UpdateStatusAsync(Guid bookingId, Guid workerId, BookingStatus newStatus);

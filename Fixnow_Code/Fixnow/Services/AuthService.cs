@@ -14,17 +14,20 @@ public class AuthService : IAuthService
   private readonly IRefreshTokenRepository _refreshTokenRepo;
   private readonly IJwtService _jwtService;
   private readonly IConfiguration _config;
+  private readonly IAuditService _auditService;
 
   public AuthService(
     IUserRepository userRepo,
     IRefreshTokenRepository refreshTokenRepo,
     IJwtService jwtService,
-    IConfiguration config)
+    IConfiguration config,
+    IAuditService auditService)
   {
     _userRepo = userRepo;
     _refreshTokenRepo = refreshTokenRepo;
     _jwtService = jwtService;
     _config = config;
+    _auditService = auditService;
   }
 
   /// <inheritdoc/>
@@ -43,6 +46,9 @@ public class AuthService : IAuthService
     };
 
     await _userRepo.CreateAsync(user);
+
+    await _auditService.LogActionAsync("REGISTER_SUCCESS", "User", user.Id, user.Role.ToString(), user.Id, null, null);
+
     return await BuildAuthResponseAsync(user);
   }
 
@@ -54,7 +60,12 @@ public class AuthService : IAuthService
 
     var isValid = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
     if (!isValid)
+    {
+      await _auditService.LogActionAsync("LOGIN_FAILED", "User", null, null, null, null, $"{{ \"email\": \"{request.Email}\" }}");
       throw new UnauthorizedAccessException("Invalid email or password.");
+    }
+
+    await _auditService.LogActionAsync("LOGIN_SUCCESS", "User", user.Id, user.Role.ToString(), user.Id, null, null);
 
     return await BuildAuthResponseAsync(user);
   }

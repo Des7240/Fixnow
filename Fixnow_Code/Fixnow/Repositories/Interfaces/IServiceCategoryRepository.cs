@@ -8,6 +8,7 @@ namespace Fixnow.Repositories.Interfaces;
 public interface IServiceCategoryRepository
 {
   Task<List<ServiceCategory>> FindAllActiveAsync();
+  Task<List<ServiceCategory>> SearchAsync(string keyword);
   Task<ServiceCategory?> FindByIdAsync(Guid id);
   Task<ServiceCategory> CreateAsync(ServiceCategory service);
 }

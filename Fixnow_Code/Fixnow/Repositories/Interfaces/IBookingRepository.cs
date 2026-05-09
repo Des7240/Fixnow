@@ -12,6 +12,7 @@ public interface IBookingRepository
   Task<Booking?> FindByIdWithDetailsAsync(Guid id);
   Task<List<Booking>> FindByCustomerAsync(Guid customerId);
   Task<List<Booking>> FindByWorkerAsync(Guid workerId);
+  Task<List<Booking>> FindMatchingByWorkerAsync(Guid workerId);
   Task<Booking> CreateAsync(Booking booking);
   Task UpdateAsync(Booking booking);
 }

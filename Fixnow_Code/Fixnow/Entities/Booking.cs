@@ -13,6 +13,7 @@ public class Booking
   public Guid? WorkerId { get; set; }
   public Guid ServiceId { get; set; }
   public BookingStatus Status { get; set; } = BookingStatus.PENDING;
+  public BookingPaymentStatus PaymentStatus { get; set; } = BookingPaymentStatus.UNPAID;
   public string Address { get; set; } = string.Empty;
   public double Lat { get; set; }
   public double Lng { get; set; }
@@ -21,6 +22,9 @@ public class Booking
   public Point Location { get; set; } = null!;
 
   public string? Description { get; set; }
+  
+  public decimal? TotalAmount { get; set; } // Set when quote is approved
+  
   public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
   public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
@@ -30,4 +34,8 @@ public class Booking
   public ServiceCategory Service { get; set; } = null!;
   public ICollection<BookingStatusHistory> StatusHistories { get; set; } = new List<BookingStatusHistory>();
   public ICollection<BookingMatchingLog> MatchingLogs { get; set; } = new List<BookingMatchingLog>();
+  public BookingFinancial? Financial { get; set; }
+  public ICollection<Payment> Payments { get; set; } = new List<Payment>();
+  public ICollection<Quotation> Quotations { get; set; } = new List<Quotation>();
+  public ICollection<Dispute> Disputes { get; set; } = new List<Dispute>();
 }

@@ -11,17 +11,348 @@ Worker Status	Active/Banned
 Admin Review	Quản lý KYC
 Worker Search	Tìm kiếm thợ
 2. Worker Management Workflow
+flowchart TD
+
+    START([Start])
+
+    REGISTER["Register Worker"]
+
+    PROFILE["Create Worker Profile"]
+
+    SKILL["Add Skills"]
+
+    KYC["Submit KYC"]
+
+    REVIEW["Admin Review"]
+
+    APPROVE["Approve Worker"]
+
+    REJECT["Reject Worker"]
+
+    AVAILABLE["Worker Online"]
+
+    MATCHING["Available For Booking"]
+
+    END([End])
+
+    START --> REGISTER
+
+    REGISTER --> PROFILE
+
+    PROFILE --> SKILL
+
+    SKILL --> KYC
+
+    KYC --> REVIEW
+
+    REVIEW --> APPROVE
+    REVIEW --> REJECT
+
+    APPROVE --> AVAILABLE
+
+    AVAILABLE --> MATCHING
+
+    MATCHING --> END
 3. Swimlane – Worker Profile Creation
+flowchart LR
+
+    subgraph WORKER["Worker"]
+        W1["Fill Profile"]
+    end
+
+    subgraph FRONTEND["Frontend"]
+        F1["Validate Form"]
+        F2["Call Worker API"]
+    end
+
+    subgraph API["Worker API"]
+        A1["Validate Request"]
+        A2["Create Worker Profile"]
+        A3["Save Profile"]
+    end
+
+    subgraph DB["PostgreSQL"]
+        D1["worker_profiles"]
+    end
+
+    W1 --> F1
+
+    F1 --> F2
+
+    F2 --> A1
+    A1 --> A2
+    A2 --> A3
+
+    A3 --> D1
 4. Swimlane – Worker KYC Submission
+flowchart LR
+
+    subgraph WORKER["Worker"]
+        W1["Upload Documents"]
+        W2["Submit KYC"]
+    end
+
+    subgraph FRONTEND["Frontend"]
+        F1["Upload Files"]
+        F2["Call KYC API"]
+    end
+
+    subgraph API["KYC API"]
+        A1["Validate Documents"]
+        A2["Save KYC"]
+        A3["Set PENDING"]
+    end
+
+    subgraph STORAGE["MinIO"]
+        S1["Store Files"]
+    end
+
+    subgraph DB["PostgreSQL"]
+        D1["worker_kyc"]
+    end
+
+    W1 --> F1
+
+    F1 --> S1
+
+    W2 --> F2
+
+    F2 --> A1
+    A1 --> A2
+    A2 --> A3
+
+    A3 --> D1
 5. Swimlane – Admin Review KYC
+flowchart LR
+
+    subgraph ADMIN["Admin"]
+        AD1["Open KYC"]
+        AD2["Approve/Reject"]
+    end
+
+    subgraph FRONTEND["Admin Panel"]
+        F1["Call Review API"]
+    end
+
+    subgraph API["Admin API"]
+        A1["Validate Admin"]
+        A2["Update KYC Status"]
+        A3["Update Worker Status"]
+    end
+
+    subgraph DB["PostgreSQL"]
+        D1["worker_kyc"]
+        D2["worker_profiles"]
+    end
+
+    AD1 --> AD2
+
+    AD2 --> F1
+
+    F1 --> A1
+    A1 --> A2
+    A2 --> A3
+
+    A2 --> D1
+    A3 --> D2
 6. Swimlane – Worker Availability Update
+flowchart LR
+
+    subgraph WORKER["Worker"]
+        W1["Toggle Availability"]
+    end
+
+    subgraph FRONTEND["Worker App"]
+        F1["Call Availability API"]
+    end
+
+    subgraph API["Worker API"]
+        A1["Validate Worker"]
+        A2["Update Availability"]
+    end
+
+    subgraph DB["PostgreSQL"]
+        D1["worker_profiles"]
+    end
+
+    W1 --> F1
+
+    F1 --> A1
+    A1 --> A2
+
+    A2 --> D1
 7. Sequence Diagram – Create Worker Profile
+sequenceDiagram
+
+    actor Worker
+
+    participant Frontend
+    participant WorkerAPI
+    participant WorkerService
+    participant Database
+
+    Worker->>Frontend: Create profile
+
+    Frontend->>WorkerAPI: POST /workers/profile
+
+    WorkerAPI->>WorkerService: Validate request
+
+    WorkerService->>Database: Save profile
+
+    Database-->>WorkerService: Created
+
+    WorkerService-->>WorkerAPI: Success
+
+    WorkerAPI-->>Frontend: Profile created
 8. Sequence Diagram – Submit Worker KYC
+sequenceDiagram
+
+    actor Worker
+
+    participant Frontend
+    participant KYCAPI
+    participant KYCService
+    participant Storage
+    participant Database
+
+    Worker->>Frontend: Upload KYC
+
+    Frontend->>Storage: Upload files
+
+    Storage-->>Frontend: File URLs
+
+    Frontend->>KYCAPI: Submit KYC
+
+    KYCAPI->>KYCService: Validate documents
+
+    KYCService->>Database: Save KYC
+
+    Database-->>KYCService: KYC saved
+
+    KYCService-->>KYCAPI: PENDING
+
+    KYCAPI-->>Frontend: Submission success
 9. Sequence Diagram – Admin Review KYC
+sequenceDiagram
+
+    actor Admin
+
+    participant Frontend
+    participant AdminAPI
+    participant KYCService
+    participant Database
+    participant NotificationService
+
+    Admin->>Frontend: Review KYC
+
+    Frontend->>AdminAPI: PATCH /admin/kyc/{id}
+
+    AdminAPI->>KYCService: Update KYC status
+
+    KYCService->>Database: Save APPROVED
+
+    Database-->>KYCService: Updated
+
+    KYCService->>NotificationService: Notify worker
+
+    NotificationService-->>KYCService: Sent
+
+    KYCService-->>AdminAPI: Success
+
+    AdminAPI-->>Frontend: Review completed
 10. Sequence Diagram – Worker Availability
+sequenceDiagram
+
+    actor Worker
+
+    participant Frontend
+    participant WorkerAPI
+    participant WorkerService
+    participant Database
+
+    Worker->>Frontend: Toggle online
+
+    Frontend->>WorkerAPI: PATCH /workers/availability
+
+    WorkerAPI->>WorkerService: Update availability
+
+    WorkerService->>Database: Save ONLINE
+
+    Database-->>WorkerService: Updated
+
+    WorkerService-->>WorkerAPI: Success
+
+    WorkerAPI-->>Frontend: Status updated
 11. Worker KYC State Diagram
+stateDiagram-v2
+
+    [*] --> PENDING
+
+    PENDING --> UNDER_REVIEW
+
+    UNDER_REVIEW --> APPROVED
+
+    UNDER_REVIEW --> REJECTED
+
+    REJECTED --> RESUBMITTED
+
+    RESUBMITTED --> UNDER_REVIEW
 12. Worker Availability State Diagram
+stateDiagram-v2
+
+    [*] --> OFFLINE
+
+    OFFLINE --> ONLINE
+
+    ONLINE --> BUSY
+
+    BUSY --> ONLINE
+
+    ONLINE --> OFFLINE
+
+    OFFLINE --> BANNED
+
+    ONLINE --> BANNED
 13. Worker Management Architecture
+flowchart TB
+
+    WORKER["Worker App"]
+
+    ADMIN["Admin Panel"]
+
+    FRONTEND["React Frontend"]
+
+    WORKERAPI["Worker API"]
+
+    KYCAPI["KYC API"]
+
+    ADMINAPI["Admin API"]
+
+    STORAGE["MinIO"]
+
+    DB["PostgreSQL"]
+
+    REDIS["Redis"]
+
+    FCM["Firebase"]
+
+    WORKER --> FRONTEND
+
+    ADMIN --> FRONTEND
+
+    FRONTEND --> WORKERAPI
+    FRONTEND --> KYCAPI
+    FRONTEND --> ADMINAPI
+
+    WORKERAPI --> DB
+    KYCAPI --> DB
+    ADMINAPI --> DB
+
+    KYCAPI --> STORAGE
+
+    WORKERAPI --> REDIS
+
+    ADMINAPI --> FCM
 14. Worker API Contract
 Create Worker Profile
 POST /api/v1/workers/profile
@@ -179,6 +510,14 @@ Maps	React Leaflet
 GPS	Browser Geolocation
 Admin UI	Ant Design
 Backend
+Spring Boot
+Spring Security
+Hibernate Spatial
+MinIO SDK
+Redis
+Firebase SDK
+
+OR
 
 ASP.NET Core
 EF Core

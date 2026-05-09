@@ -10,6 +10,8 @@ public class ServiceCategory
   public string Name { get; set; } = string.Empty;
   public string? Description { get; set; }
   public string? IconUrl { get; set; }
+  public decimal BasePrice { get; set; } = 0;
+  public int EstimatedDurationMinutes { get; set; } = 60;
   public bool IsActive { get; set; } = true;
   public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

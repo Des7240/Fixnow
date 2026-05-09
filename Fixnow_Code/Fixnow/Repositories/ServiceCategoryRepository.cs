@@ -27,6 +27,16 @@ public class ServiceCategoryRepository : IServiceCategoryRepository
   }
 
   /// <inheritdoc/>
+  public async Task<List<ServiceCategory>> SearchAsync(string keyword)
+  {
+    var lowerKeyword = keyword.ToLower();
+    return await _context.ServiceCategories
+      .Where(s => s.IsActive && (s.Name.ToLower().Contains(lowerKeyword) || (s.Description != null && s.Description.ToLower().Contains(lowerKeyword))))
+      .OrderBy(s => s.Name)
+      .ToListAsync();
+  }
+
+  /// <inheritdoc/>
   public async Task<ServiceCategory?> FindByIdAsync(Guid id)
   {
     return await _context.ServiceCategories.FindAsync(id);

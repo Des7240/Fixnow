@@ -14,12 +14,14 @@ public class User
   public UserRole Role { get; set; } = UserRole.CUSTOMER;
   public string Status { get; set; } = "ACTIVE";
   public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+  public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
   // Navigation
   public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
   public ICollection<Booking> CustomerBookings { get; set; } = new List<Booking>();
   public ICollection<Booking> WorkerBookings { get; set; } = new List<Booking>();
   public WorkerLocation? CurrentLocation { get; set; }
+  public Wallet? Wallet { get; set; }
 
   // Worker Management Navigation
   public WorkerProfile? WorkerProfile { get; set; }

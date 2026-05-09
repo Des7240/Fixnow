@@ -1,3 +1,5 @@
+using Fixnow.DTOs.Quotation;
+
 namespace Fixnow.DTOs.Booking;
 
 /// <summary>
@@ -7,6 +9,7 @@ public class BookingResponseDto
 {
   public Guid Id { get; set; }
   public string Status { get; set; } = string.Empty;
+  public string PaymentStatus { get; set; } = string.Empty;
   public string Address { get; set; } = string.Empty;
   public double Lat { get; set; }
   public double Lng { get; set; }
@@ -15,6 +18,7 @@ public class BookingResponseDto
   public BookingPartyDto Customer { get; set; } = null!;
   public BookingPartyDto? Worker { get; set; }
   public BookingServiceDto Service { get; set; } = null!;
+  public List<QuotationDto> Quotations { get; set; } = new();
 }
 
 /// <summary>Basic info for a booking party (customer or worker).</summary>
