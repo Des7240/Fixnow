@@ -4,6 +4,7 @@ using Fixnow.Entities;
 using Fixnow.Enums;
 using Fixnow.Repositories.Interfaces;
 using Fixnow.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace Fixnow.Services;
 
@@ -83,8 +84,8 @@ public class WalletService : IWalletService
     var booking = await _bookingRepo.FindByIdWithDetailsAsync(bookingId)
       ?? throw new KeyNotFoundException("Booking not found");
 
-    if (booking.Status != BookingStatus.COMPLETED)
-      throw new InvalidOperationException("Can only process income for COMPLETED bookings.");
+    if (booking.Status != BookingStatus.WORKING && booking.Status != BookingStatus.COMPLETED)
+      throw new InvalidOperationException("Can only process income for WORKING or COMPLETED bookings.");
       
     if (booking.WorkerId == null)
       throw new InvalidOperationException("Booking has no assigned worker.");
@@ -146,6 +147,58 @@ public class WalletService : IWalletService
       await transaction.CommitAsync();
 
       await _auditService.LogActionAsync("WALLET_CREDIT", "Wallet", booking.WorkerId.Value, "WORKER", wallet.Id, null, $"Added {workerIncome} net income");
+    }
+    catch
+    {
+      await transaction.RollbackAsync();
+      throw;
+    }
+  }
+
+  public async Task ProcessDepositAsync(Guid paymentId)
+  {
+    var payment = await _db.Payments
+      .Include(p => p.Customer)
+      .FirstOrDefaultAsync(p => p.Id == paymentId)
+      ?? throw new KeyNotFoundException("Payment not found");
+
+    if (payment.Status != PaymentStatus.SUCCESS)
+      throw new InvalidOperationException("Payment is not successful.");
+
+    if (payment.Type != PaymentType.WALLET_DEPOSIT)
+      throw new InvalidOperationException("Payment is not a wallet deposit.");
+
+    var wallet = await GetOrCreateWalletAsync(payment.CustomerId);
+
+    // Prevent double processing
+    var existingTransactions = await _transactionRepo.FindByWalletIdAsync(wallet.Id);
+    if (existingTransactions.Any(t => t.ReferenceId == paymentId && t.Type == TransactionType.DEPOSIT))
+    {
+      return;
+    }
+
+    using var transaction = await _db.Database.BeginTransactionAsync();
+    try
+    {
+      var balanceBefore = wallet.Balance;
+      var balanceAfter = wallet.Balance + payment.Amount;
+      wallet.Balance = balanceAfter;
+
+      await _transactionRepo.CreateAsync(new WalletTransaction
+      {
+        WalletId = wallet.Id,
+        Type = TransactionType.DEPOSIT,
+        Amount = payment.Amount,
+        BalanceBefore = balanceBefore,
+        BalanceAfter = balanceAfter,
+        ReferenceId = paymentId,
+        Description = "Wallet top-up deposit"
+      });
+
+      await _walletRepo.UpdateAsync(wallet);
+      await transaction.CommitAsync();
+
+      await _auditService.LogActionAsync("WALLET_DEPOSIT", "Wallet", payment.CustomerId, "USER", wallet.Id, null, $"Deposited {payment.Amount}");
     }
     catch
     {

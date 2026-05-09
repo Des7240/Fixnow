@@ -12,10 +12,12 @@ namespace Fixnow.Controllers;
 public class WalletController : ControllerBase
 {
   private readonly IWalletService _walletService;
+  private readonly IPaymentService _paymentService;
 
-  public WalletController(IWalletService walletService)
+  public WalletController(IWalletService walletService, IPaymentService paymentService)
   {
     _walletService = walletService;
+    _paymentService = paymentService;
   }
 
   /// <summary>
@@ -71,6 +73,25 @@ public class WalletController : ControllerBase
     catch (InvalidOperationException ex)
     {
       return BadRequest(new { message = ex.Message });
+    }
+    catch (ArgumentException ex)
+    {
+      return BadRequest(new { message = ex.Message });
+    }
+  }
+
+  /// <summary>
+  /// Tạo yêu cầu nạp tiền vào ví.
+  /// </summary>
+  [HttpPost("deposit")]
+  public async Task<IActionResult> CreateDeposit([FromBody] CreateWalletDepositRequestDto request)
+  {
+    var userId = GetCurrentUserId();
+    var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+    try
+    {
+      var result = await _paymentService.CreateWalletDepositAsync(request, userId, ipAddress);
+      return Ok(result);
     }
     catch (ArgumentException ex)
     {

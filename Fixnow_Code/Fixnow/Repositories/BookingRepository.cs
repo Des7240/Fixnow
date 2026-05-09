@@ -61,11 +61,33 @@ public class BookingRepository : IBookingRepository
   /// <inheritdoc/>
   public async Task<List<Booking>> FindMatchingByWorkerAsync(Guid workerId)
   {
+    // 1. Get worker's current location and skills
+    var workerLoc = await _context.WorkerLocations.FindAsync(workerId);
+    var workerSkills = await _context.WorkerServices
+      .Where(ws => ws.WorkerId == workerId)
+      .Select(ws => ws.ServiceId)
+      .ToListAsync();
+
+    if (workerLoc == null || !workerSkills.Any())
+    {
+      // Fallback to logs if location/skills not available
+      return await _context.Bookings
+        .Include(b => b.Service)
+        .Include(b => b.Customer)
+        .Where(b => b.Status == BookingStatus.MATCHING && _context.BookingMatchingLogs
+          .Any(l => l.BookingId == b.Id && l.WorkerId == workerId))
+        .OrderByDescending(b => b.CreatedAt)
+        .ToListAsync();
+    }
+
+    // 2. Find MATCHING bookings that are nearby (10km) and match skills
+    // and where the worker hasn't been rejected or hasn't accepted yet
     return await _context.Bookings
       .Include(b => b.Service)
       .Include(b => b.Customer)
-      .Where(b => _context.BookingMatchingLogs
-        .Any(l => l.BookingId == b.Id && l.WorkerId == workerId && l.Status == MatchingLogStatus.NOTIFIED))
+      .Where(b => b.Status == BookingStatus.MATCHING)
+      .Where(b => workerSkills.Contains(b.ServiceId))
+      .Where(b => b.Location.IsWithinDistance(workerLoc.Location, 10000)) // 10km
       .OrderByDescending(b => b.CreatedAt)
       .ToListAsync();
   }

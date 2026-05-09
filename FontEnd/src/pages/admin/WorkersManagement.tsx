@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Table, Tag, Button, message, Popconfirm, Input } from 'antd';
-import { ShieldAlert, Search } from 'lucide-react';
+import { ShieldAlert, Search, CheckCircle } from 'lucide-react';
 import axiosInstance from '../../utils/axiosInstance';
 
 export default function WorkersManagement() {
@@ -28,6 +28,16 @@ export default function WorkersManagement() {
     try {
       await axiosInstance.patch(`/admin/workers/${id}/suspend`);
       message.success('Đã khóa tài khoản thợ');
+      fetchWorkers();
+    } catch (err) {
+      message.error('Có lỗi xảy ra');
+    }
+  };
+
+  const handleActivate = async (id: string) => {
+    try {
+      await axiosInstance.patch(`/admin/workers/${id}/activate`);
+      message.success('Đã kích hoạt lại tài khoản thợ');
       fetchWorkers();
     } catch (err) {
       message.error('Có lỗi xảy ra');
@@ -75,7 +85,7 @@ export default function WorkersManagement() {
       key: 'action',
       render: (_: any, record: any) => (
         <div className="flex gap-2">
-          {record.status !== 'BANNED' && (
+          {record.status !== 'BANNED' ? (
             <Popconfirm
               title="Khóa tài khoản thợ?"
               description="Thợ này sẽ không thể nhận đơn hàng mới."
@@ -90,6 +100,22 @@ export default function WorkersManagement() {
                 className="flex items-center gap-1"
               >
                 Khóa
+              </Button>
+            </Popconfirm>
+          ) : (
+            <Popconfirm
+              title="Kích hoạt lại tài khoản?"
+              description="Cho phép thợ này tiếp tục hoạt động trên hệ thống."
+              onConfirm={() => handleActivate(record.id)}
+              okText="Đồng ý"
+              cancelText="Hủy"
+            >
+              <Button 
+                type="link" 
+                icon={<CheckCircle className="w-4 h-4" />}
+                className="text-green-600 font-bold flex items-center gap-1 hover:text-green-700"
+              >
+                Kích hoạt
               </Button>
             </Popconfirm>
           )}

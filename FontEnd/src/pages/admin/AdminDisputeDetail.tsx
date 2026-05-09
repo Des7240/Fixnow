@@ -9,7 +9,9 @@ interface DisputeDetail {
   id: string;
   bookingId: string;
   customerId: string;
+  customerName: string;
   workerId: string;
+  workerName: string;
   reason: string;
   status: string;
   createdAt: string;
@@ -140,11 +142,13 @@ export default function AdminDisputeDetail() {
               </div>
               <div>
                 <p className="text-gray-500 mb-1">Người khiếu nại (Customer)</p>
-                <p className="font-semibold text-gray-900">{dispute.customerId}</p>
+                <p className="font-semibold text-gray-900">{dispute.customerName}</p>
+                <p className="text-[10px] text-gray-400">{dispute.customerId}</p>
               </div>
               <div>
                 <p className="text-gray-500 mb-1">Người bị khiếu nại (Worker)</p>
-                <p className="font-semibold text-gray-900">{dispute.workerId}</p>
+                <p className="font-semibold text-gray-900">{dispute.workerName}</p>
+                <p className="text-[10px] text-gray-400">{dispute.workerId}</p>
               </div>
             </div>
             

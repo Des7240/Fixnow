@@ -142,10 +142,20 @@ public class BookingController : ControllerBase
     if (booking == null)
       return NotFound(new { message = "Booking not found." });
 
-    var isNotifiedWorker = booking.Status == BookingStatus.MATCHING && 
-                           booking.MatchingLogs.Any(l => l.WorkerId == userId && l.Status == MatchingLogStatus.NOTIFIED);
+    // Access control:
+    // 1. Customer who created it
+    // 2. Worker who is assigned
+    // 3. Worker who is eligible for matching (status is MATCHING, has required skill, and is nearby)
+    var isEligibleWorker = false;
+    if (booking.Status == BookingStatus.MATCHING)
+    {
+      var workerLoc = await _db.WorkerLocations.FindAsync(userId);
+      var hasSkill = await _db.WorkerServices.AnyAsync(ws => ws.WorkerId == userId && ws.ServiceId == booking.ServiceId);
+      var isNearby = workerLoc != null && workerLoc.Location.IsWithinDistance(booking.Location, 10000); // 10km
+      isEligibleWorker = hasSkill && isNearby;
+    }
 
-    if (booking.CustomerId != userId && booking.WorkerId != userId && !isNotifiedWorker)
+    if (booking.CustomerId != userId && booking.WorkerId != userId && !isEligibleWorker)
       return Forbid();
 
     var history = await _db.BookingStatusHistories

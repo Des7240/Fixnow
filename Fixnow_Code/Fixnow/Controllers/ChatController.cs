@@ -27,6 +27,19 @@ public class ChatController : ControllerBase
     return Ok(result);
   }
 
+  [HttpGet("by-booking/{bookingId}")]
+  public async Task<IActionResult> GetByBooking(Guid bookingId)
+  {
+    var conversation = await _chatService.GetOrCreateConversationByBookingAsync(bookingId, CurrentUserId);
+    var (messages, _) = await _chatService.GetMessagesAsync(conversation.Id, CurrentUserId, 1, 100);
+    
+    return Ok(new
+    {
+      Conversation = conversation,
+      Messages = messages
+    });
+  }
+
   [HttpGet("conversations/{id}/messages")]
   public async Task<IActionResult> GetMessages(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 30)
   {

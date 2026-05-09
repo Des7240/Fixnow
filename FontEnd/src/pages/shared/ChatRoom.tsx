@@ -16,6 +16,7 @@ export default function ChatRoom() {
   const { connection } = useSignalR();
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
+  const [conversation, setConversation] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -29,10 +30,12 @@ export default function ChatRoom() {
   }, [messages]);
 
   useEffect(() => {
-    if (connection) {
+    if (connection && conversation) {
+      // Join the conversation group
+      connection.invoke("JoinConversation", conversation.id).catch(err => console.error(err));
+
       connection.on('ReceiveMessage', (msg) => {
-        // If message is for this booking
-        if (msg.conversationId === id) {
+        if (msg.conversationId === conversation.id) {
           addMessage(msg);
         }
       });
@@ -41,13 +44,14 @@ export default function ChatRoom() {
         connection.off('ReceiveMessage');
       };
     }
-  }, [connection, id, addMessage]);
+  }, [connection, conversation, addMessage]);
 
   const fetchHistory = async () => {
     try {
       setLoading(true);
-      const res = await axiosInstance.get(`/chat/${id}`);
-      setMessages(res.data);
+      const res = await axiosInstance.get(`/chat/by-booking/${id}`);
+      setConversation(res.data.conversation);
+      setMessages(res.data.messages);
     } catch (err) {
       console.error(err);
       message.error('Không thể tải lịch sử tin nhắn');
@@ -57,15 +61,18 @@ export default function ChatRoom() {
   };
 
   const sendMessage = async () => {
-    if (!inputText.trim()) return;
+    if (!inputText.trim() || !conversation) return;
     try {
       const text = inputText;
       setInputText('');
-      await axiosInstance.post('/chat', {
-        conversationId: id,
-        content: text
+      const res = await axiosInstance.post('/chat/messages', {
+        conversationId: conversation.id,
+        content: text,
+        messageType: 'TEXT'
       });
-      // The message will be broadcasted back via SignalR
+      
+      // Add message immediately for realtime feedback
+      addMessage(res.data);
     } catch (err) {
       message.error('Không gửi được tin nhắn');
     }
@@ -73,18 +80,23 @@ export default function ChatRoom() {
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !conversation) return;
 
     const formData = new FormData();
-    formData.append('conversationId', id!);
     formData.append('file', file);
 
     try {
-      await axiosInstance.post('/chat/image', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+      const uploadRes = await axiosInstance.post('/files/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
+
+      const res = await axiosInstance.post('/chat/messages', {
+        conversationId: conversation.id,
+        messageType: 'IMAGE',
+        fileIds: [uploadRes.data.id]
+      });
+
+      addMessage(res.data);
     } catch (err) {
       message.error('Không gửi được hình ảnh');
     }
@@ -98,6 +110,8 @@ export default function ChatRoom() {
     );
   }
 
+  const otherName = user?.role === 'CUSTOMER' ? conversation?.workerName : conversation?.customerName;
+
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Header */}
@@ -107,10 +121,10 @@ export default function ChatRoom() {
         </button>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center font-bold text-orange-600">
-            ?
+            {otherName?.charAt(0) || '?'}
           </div>
           <div>
-            <h1 className="text-sm font-bold text-gray-900">Khách hàng / Thợ</h1>
+            <h1 className="text-sm font-bold text-gray-900">{otherName || 'Đang tải...'}</h1>
             <p className="text-[10px] text-green-500 font-bold">● Đang hoạt động</p>
           </div>
         </div>
@@ -127,7 +141,12 @@ export default function ChatRoom() {
                 isMine ? "bg-orange-500 text-white rounded-br-none" : "bg-white text-gray-800 rounded-bl-none border border-gray-100"
               )}>
                 {msg.messageType === 'IMAGE' ? (
-                  <img src={msg.content} alt="Attachment" className="max-w-[200px] rounded-lg mb-1" />
+                  <div className="space-y-1">
+                    {msg.attachmentUrls?.map((url: string, idx: number) => (
+                      <img key={idx} src={url} alt="Attachment" className="max-w-[200px] rounded-lg" />
+                    ))}
+                    {msg.content && <p className="text-sm">{msg.content}</p>}
+                  </div>
                 ) : (
                   <p className="text-sm">{msg.content}</p>
                 )}

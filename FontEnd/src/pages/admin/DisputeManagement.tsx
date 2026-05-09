@@ -9,7 +9,9 @@ interface Dispute {
   id: string;
   bookingId: string;
   customerId: string;
+  customerName: string;
   workerId: string;
+  workerName: string;
   reason: string;
   status: string;
   createdAt: string;
@@ -61,8 +63,8 @@ export default function DisputeManagement() {
           <thead className="bg-gray-50 border-b border-gray-200 text-gray-600">
             <tr>
               <th className="px-6 py-4 font-bold">Mã Khiếu nại</th>
-              <th className="px-6 py-4 font-bold">Lý do</th>
-              <th className="px-6 py-4 font-bold">Ngày tạo</th>
+              <th className="px-6 py-4 font-bold">Người khiếu nại</th>
+              <th className="px-6 py-4 font-bold">Người bị khiếu nại</th>
               <th className="px-6 py-4 font-bold">Trạng thái</th>
               <th className="px-6 py-4 font-bold text-right">Thao tác</th>
             </tr>
@@ -83,14 +85,18 @@ export default function DisputeManagement() {
             ) : (
               disputes.map((dispute) => (
                 <tr key={dispute.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-900">
-                    #{dispute.id.split('-')[0]}
+                  <td className="px-6 py-4">
+                    <p className="font-bold text-gray-900 truncate max-w-[150px]">#{dispute.id.split('-')[0]}</p>
+                    <p className="text-xs text-gray-500 italic truncate max-w-[200px] mt-0.5">{dispute.reason}</p>
+                    <p className="text-[10px] text-gray-400 mt-1">{new Date(dispute.createdAt).toLocaleString('vi-VN')}</p>
                   </td>
-                  <td className="px-6 py-4 text-gray-600 max-w-xs truncate">
-                    {dispute.reason}
+                  <td className="px-6 py-4">
+                    <p className="font-bold text-gray-800">{dispute.customerName}</p>
+                    <p className="text-xs text-gray-500">#{dispute.customerId.split('-')[0]}</p>
                   </td>
-                  <td className="px-6 py-4 text-gray-500">
-                    {new Date(dispute.createdAt).toLocaleString('vi-VN')}
+                  <td className="px-6 py-4">
+                    <p className="font-bold text-gray-800">{dispute.workerName}</p>
+                    <p className="text-xs text-gray-500">#{dispute.workerId.split('-')[0]}</p>
                   </td>
                   <td className="px-6 py-4">
                     <span className={clsx("px-3 py-1 rounded-full text-xs font-bold", getStatusColor(dispute.status))}>

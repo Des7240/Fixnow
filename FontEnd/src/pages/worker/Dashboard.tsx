@@ -30,6 +30,34 @@ export default function WorkerDashboard() {
     fetchProfile();
   }, []);
 
+  const updateLocation = async () => {
+    if (navigator.geolocation) {
+      const hide = message.loading('Đang lấy vị trí GPS...', 0);
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          try {
+            await axiosInstance.put('/workers/location', {
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude
+            });
+            hide();
+            message.success('Đã cập nhật vị trí mới');
+          } catch (e) {
+            hide();
+            message.error('Lỗi khi cập nhật vị trí lên máy chủ');
+          }
+        },
+        (err) => {
+          hide();
+          message.error('Không thể truy cập GPS. Vui lòng cấp quyền.');
+          console.warn('Lỗi lấy GPS:', err);
+        }
+      );
+    } else {
+      message.error('Trình duyệt của bạn không hỗ trợ định vị');
+    }
+  };
+
   useEffect(() => {
     // Fetch existing matching jobs when component mounts or becomes online
     const fetchMatchingJobs = async () => {
@@ -37,7 +65,6 @@ export default function WorkerDashboard() {
         try {
           const res = await axiosInstance.get('/bookings/matching');
           if (res.data && res.data.length > 0) {
-            // If multiple matching jobs, just show the first one for simplicity in this MVP view
             setNewJob(res.data[0]);
           }
         } catch (err) {
@@ -53,9 +80,9 @@ export default function WorkerDashboard() {
     let intervalId: ReturnType<typeof setInterval>;
 
     if (isOnline) {
-      // Start GPS tracking
       setLocationUpdateActive(true);
-      const updateLocation = () => {
+      // For background updates we use a silent version
+      const silentUpdate = () => {
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             async (pos) => {
@@ -64,17 +91,15 @@ export default function WorkerDashboard() {
                   lat: pos.coords.latitude,
                   lng: pos.coords.longitude
                 });
-              } catch (e) {
-                console.error('Lỗi cập nhật vị trí');
-              }
+              } catch (e) { /* ignore silent error */ }
             },
-            (err) => console.warn('Lỗi lấy GPS:', err)
+            () => {}
           );
         }
       };
 
-      updateLocation(); // Run immediately
-      intervalId = setInterval(updateLocation, 30000); // 30s interval
+      silentUpdate(); 
+      intervalId = setInterval(silentUpdate, 30000); // 30s interval
     } else {
       setLocationUpdateActive(false);
     }
@@ -145,9 +170,15 @@ export default function WorkerDashboard() {
           </div>
           <div className="flex items-center gap-3">
             {locationUpdateActive && (
-              <span className="flex items-center gap-1 text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded-lg">
-                <MapPin className="w-3 h-3 animate-bounce" /> GPS On
-              </span>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  updateLocation();
+                }}
+                className="flex items-center gap-1 text-xs font-semibold text-blue-600 bg-blue-100 px-3 py-1.5 rounded-lg hover:bg-blue-200 transition-all border-none"
+              >
+                <MapPin className="w-3 h-3 animate-pulse" /> Làm mới vị trí
+              </button>
             )}
             <Switch
               checked={isOnline}
@@ -158,7 +189,7 @@ export default function WorkerDashboard() {
         </div>
       </div>
 
-      {/* Main Content (Mock incoming job) */}
+      {/* Main Content */}
       <div className="flex-1 p-6 flex flex-col justify-center">
         {isOnline ? (
           <div className="flex flex-col items-center justify-center text-center">
@@ -171,7 +202,7 @@ export default function WorkerDashboard() {
               Giữ ứng dụng luôn mở. Khi có đơn mới, hệ thống sẽ báo ngay cho bạn.
             </p>
             
-            {/* New Job Modal Overlay (MVP simple version) */}
+            {/* New Job Modal Overlay */}
             {newJob && (
               <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in duration-300">

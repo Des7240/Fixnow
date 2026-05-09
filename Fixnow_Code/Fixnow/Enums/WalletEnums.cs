@@ -6,6 +6,7 @@ public enum TransactionType
   COMMISSION_FEE,
   WITHDRAWAL,
   REFUND,
+  DEPOSIT,
   ADJUSTMENT
 }
 

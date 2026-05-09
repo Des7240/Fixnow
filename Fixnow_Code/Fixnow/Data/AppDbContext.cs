@@ -303,10 +303,12 @@ public class AppDbContext : DbContext
       entity.HasKey(p => p.Id);
       entity.Property(p => p.Provider).HasConversion<string>();
       entity.Property(p => p.Status).HasConversion<string>();
+      entity.Property(p => p.Type).HasConversion<string>();
       entity.HasOne(p => p.Booking)
             .WithMany(b => b.Payments)
             .HasForeignKey(p => p.BookingId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Cascade)
+            .IsRequired(false);
       entity.HasOne(p => p.Customer)
             .WithMany()
             .HasForeignKey(p => p.CustomerId)

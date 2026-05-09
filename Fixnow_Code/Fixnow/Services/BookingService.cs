@@ -1,3 +1,4 @@
+using Fixnow.Data;
 using Fixnow.DTOs.Booking;
 using Fixnow.DTOs.Quotation;
 using Fixnow.Entities;
@@ -5,6 +6,7 @@ using Fixnow.Enums;
 using Fixnow.Repositories.Interfaces;
 using Fixnow.Services.Interfaces;
 using Hangfire;
+using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 
 namespace Fixnow.Services;
@@ -14,18 +16,7 @@ namespace Fixnow.Services;
 /// </summary>
 public class BookingService : IBookingService
 {
-  // Valid transitions that a WORKER can trigger
-  private static readonly Dictionary<BookingStatus, BookingStatus[]> WorkerTransitions = new()
-  {
-    [BookingStatus.ASSIGNED] = new[] { BookingStatus.ON_THE_WAY },
-    [BookingStatus.ON_THE_WAY] = new[] { BookingStatus.WORKING },
-    [BookingStatus.WORKING] = new[] { BookingStatus.COMPLETED },
-  };
-
-  private static readonly GeometryFactory GeomFactory = new(new PrecisionModel(), 4326);
-
   private readonly IBookingRepository _bookingRepo;
-  private readonly IBookingMatchingLogRepository _matchingLogRepo;
   private readonly IServiceCategoryRepository _serviceRepo;
   private readonly IMatchingService _matchingService;
   private readonly INotificationService _notificationService;
@@ -33,27 +24,36 @@ public class BookingService : IBookingService
   private readonly IAuditService _auditService;
   private readonly IConversationRepository _conversationRepo;
   private readonly IBackgroundJobClient _backgroundJobClient;
+  private readonly IBookingMatchingLogRepository _matchingLogRepo;
+  private readonly IUserRepository _userRepo;
+  private readonly AppDbContext _context;
+
+  private static readonly GeometryFactory GeomFactory = new(new PrecisionModel(), 4326);
 
   public BookingService(
     IBookingRepository bookingRepo,
-    IBookingMatchingLogRepository matchingLogRepo,
     IServiceCategoryRepository serviceRepo,
     IMatchingService matchingService,
     INotificationService notificationService,
     IBookingStatusHistoryRepository historyRepo,
     IAuditService auditService,
     IConversationRepository conversationRepo,
-    IBackgroundJobClient backgroundJobClient)
+    IBookingMatchingLogRepository matchingLogRepo,
+    IUserRepository userRepo,
+    IBackgroundJobClient backgroundJobClient,
+    AppDbContext context)
   {
     _bookingRepo = bookingRepo;
-    _matchingLogRepo = matchingLogRepo;
     _serviceRepo = serviceRepo;
     _matchingService = matchingService;
     _notificationService = notificationService;
     _historyRepo = historyRepo;
     _auditService = auditService;
     _conversationRepo = conversationRepo;
+    _matchingLogRepo = matchingLogRepo;
+    _userRepo = userRepo;
     _backgroundJobClient = backgroundJobClient;
+    _context = context;
   }
 
   /// <inheritdoc/>
@@ -81,7 +81,7 @@ public class BookingService : IBookingService
     // Log status history
     await LogStatusChangeAsync(booking.Id, null, BookingStatus.PENDING, customerId);
 
-    // Trigger matching asynchronously (synchronous for MVP simplicity)
+    // Trigger matching
     await _matchingService.TriggerMatchingAsync(booking.Id);
 
     // Schedule auto cancel if not accepted within 5 minutes
@@ -105,14 +105,18 @@ public class BookingService : IBookingService
     // Access control:
     // 1. Customer who created it
     // 2. Worker who is assigned
-    // 3. Worker who was notified for matching
-    var isNotifiedWorker = false;
+    // 3. Worker who is eligible for matching (status is MATCHING, has required skill, and is nearby)
+    var isEligibleWorker = false;
     if (booking.Status == BookingStatus.MATCHING)
     {
-      isNotifiedWorker = await _matchingLogRepo.FindByBookingAndWorkerAsync(id, requesterId) != null;
+      var workerLoc = await _context.WorkerLocations.FindAsync(requesterId);
+      var hasSkill = await _context.WorkerServices.AnyAsync(ws => ws.WorkerId == requesterId && ws.ServiceId == booking.ServiceId);
+      
+      var isNearby = workerLoc != null && workerLoc.Location.IsWithinDistance(booking.Location, 10000); // 10km
+      isEligibleWorker = hasSkill && isNearby;
     }
 
-    if (booking.CustomerId != requesterId && booking.WorkerId != requesterId && !isNotifiedWorker)
+    if (booking.CustomerId != requesterId && booking.WorkerId != requesterId && !isEligibleWorker)
       throw new UnauthorizedAccessException("Access denied.");
 
     return MapToDto(booking);
@@ -144,12 +148,13 @@ public class BookingService : IBookingService
     if (booking.Status != BookingStatus.MATCHING)
       throw new InvalidOperationException($"Cannot accept booking with status '{booking.Status}'.");
 
-    // Verify worker was notified for this booking
-    var log = await _matchingLogRepo.FindByBookingAndWorkerAsync(bookingId, workerId)
-      ?? throw new UnauthorizedAccessException("Worker was not notified for this booking.");
+    // Verify worker eligibility (Proximity + Skills)
+    var workerLoc = await _context.WorkerLocations.FindAsync(workerId);
+    var hasSkill = await _context.WorkerServices.AnyAsync(ws => ws.WorkerId == workerId && ws.ServiceId == booking.ServiceId);
+    var isNearby = workerLoc != null && workerLoc.Location.IsWithinDistance(booking.Location, 10000);
 
-    if (log.Status != MatchingLogStatus.NOTIFIED)
-      throw new InvalidOperationException("Worker has already responded to this booking.");
+    if (!hasSkill || !isNearby)
+      throw new UnauthorizedAccessException("You are not eligible to accept this booking (location or skills mismatch).");
 
     var oldStatus = booking.Status;
 
@@ -162,7 +167,22 @@ public class BookingService : IBookingService
     await LogStatusChangeAsync(bookingId, oldStatus, BookingStatus.ASSIGNED, workerId);
 
     // Update matching logs
-    await _matchingLogRepo.UpdateStatusAsync(log, MatchingLogStatus.ACCEPTED);
+    var log = await _matchingLogRepo.FindByBookingAndWorkerAsync(bookingId, workerId);
+    if (log != null)
+    {
+      await _matchingLogRepo.UpdateStatusAsync(log, MatchingLogStatus.ACCEPTED);
+    }
+    else
+    {
+      await _matchingLogRepo.CreateAsync(new BookingMatchingLog
+      {
+        BookingId = bookingId,
+        WorkerId = workerId,
+        Status = MatchingLogStatus.ACCEPTED,
+        DistanceMeters = workerLoc!.Location.Distance(booking.Location)
+      });
+    }
+
     await _matchingLogRepo.ExpireAllNotifiedAsync(bookingId);
 
     // Create chat conversation
@@ -174,8 +194,9 @@ public class BookingService : IBookingService
     });
 
     // Notify customer
+    var worker = await _userRepo.FindByIdAsync(workerId);
     await _notificationService.NotifyCustomerBookingAssignedAsync(
-      booking.CustomerId, bookingId, booking.Worker?.FullName ?? "Worker");
+      booking.CustomerId, bookingId, worker?.FullName ?? "Thợ");
 
     return MapToDto(booking);
   }
@@ -183,55 +204,23 @@ public class BookingService : IBookingService
   /// <inheritdoc/>
   public async Task<BookingResponseDto> RejectBookingAsync(Guid bookingId, Guid workerId)
   {
-    var booking = await _bookingRepo.FindByIdWithDetailsAsync(bookingId)
-      ?? throw new KeyNotFoundException("Booking not found.");
-
-    if (booking.Status != BookingStatus.MATCHING)
-      throw new InvalidOperationException($"Cannot reject booking with status '{booking.Status}'.");
-
     var log = await _matchingLogRepo.FindByBookingAndWorkerAsync(bookingId, workerId)
-      ?? throw new UnauthorizedAccessException("Worker was not notified for this booking.");
+      ?? throw new KeyNotFoundException("Matching notification not found.");
 
     await _matchingLogRepo.UpdateStatusAsync(log, MatchingLogStatus.REJECTED);
-
-    // Check if any other workers are still NOTIFIED
-    var remaining = await _matchingLogRepo.FindNotifiedByBookingAsync(bookingId);
-
-    if (remaining.Count == 0)
-    {
-      var oldStatus = booking.Status;
-      // No more candidates – reset to PENDING and re-trigger matching
-      booking.Status = BookingStatus.PENDING;
-      await _bookingRepo.UpdateAsync(booking);
-
-      // Log status history
-      await LogStatusChangeAsync(bookingId, oldStatus, BookingStatus.PENDING, workerId);
-
-      await _matchingService.TriggerMatchingAsync(booking.Id);
-
-      // Reload after re-trigger
-      booking = await _bookingRepo.FindByIdWithDetailsAsync(bookingId)
-        ?? throw new InvalidOperationException("Failed to reload booking.");
-    }
-
-    return MapToDto(booking);
+    
+    var booking = await _bookingRepo.FindByIdAsync(bookingId);
+    return MapToDto(booking!);
   }
 
   /// <inheritdoc/>
   public async Task<BookingResponseDto> UpdateStatusAsync(Guid bookingId, Guid workerId, BookingStatus newStatus)
   {
-    var booking = await _bookingRepo.FindByIdWithDetailsAsync(bookingId)
+    var booking = await _bookingRepo.FindByIdAsync(bookingId)
       ?? throw new KeyNotFoundException("Booking not found.");
 
     if (booking.WorkerId != workerId)
       throw new UnauthorizedAccessException("Only the assigned worker can update status.");
-
-    if (!WorkerTransitions.TryGetValue(booking.Status, out var allowed)
-      || !allowed.Contains(newStatus))
-    {
-      throw new InvalidOperationException(
-        $"Invalid transition: '{booking.Status}' → '{newStatus}'.");
-    }
 
     var oldStatus = booking.Status;
     booking.Status = newStatus;
@@ -267,7 +256,12 @@ public class BookingService : IBookingService
     // Log status history
     await LogStatusChangeAsync(bookingId, oldStatus, BookingStatus.CANCELLED, customerId);
 
-    await _auditService.LogActionAsync("BOOKING_CANCELLED", "Booking", customerId, "CUSTOMER", bookingId, null, null);
+    // Notify worker if already assigned
+    if (booking.WorkerId.HasValue)
+    {
+      await _notificationService.NotifyWorkerBookingStatusAsync(
+        booking.WorkerId.Value, bookingId, "CANCELLED");
+    }
 
     return MapToDto(booking);
   }
@@ -279,13 +273,16 @@ public class BookingService : IBookingService
       BookingId = bookingId,
       OldStatus = oldStatus,
       NewStatus = newStatus,
-      UpdatedBy = updatedBy,
-      CreatedAt = DateTime.UtcNow
+      UpdatedBy = updatedBy
     });
+
+    await _auditService.LogActionAsync(
+      "BOOKING_STATUS_CHANGED", "Booking", updatedBy, 
+      "USER", bookingId, null, 
+      $"{{ \"old\": \"{oldStatus}\", \"new\": \"{newStatus}\" }}");
   }
 
-  /// <summary>Maps a Booking entity to BookingResponseDto.</summary>
-  private static BookingResponseDto MapToDto(Booking booking)
+  private BookingResponseDto MapToDto(Booking booking)
   {
     return new BookingResponseDto
     {
@@ -299,13 +296,13 @@ public class BookingService : IBookingService
       CreatedAt = booking.CreatedAt,
       Customer = new BookingPartyDto
       {
-        Id = booking.Customer?.Id ?? booking.CustomerId,
-        FullName = booking.Customer?.FullName ?? string.Empty,
+        Id = booking.CustomerId,
+        FullName = booking.Customer?.FullName ?? "Unknown",
         Email = booking.Customer?.Email ?? string.Empty,
       },
-      Worker = booking.Worker is null ? null : new BookingPartyDto
+      Worker = booking.Worker == null ? null : new BookingPartyDto
       {
-        Id = booking.Worker.Id,
+        Id = booking.WorkerId!.Value,
         FullName = booking.Worker.FullName,
         Email = booking.Worker.Email,
       },

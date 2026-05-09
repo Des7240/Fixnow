@@ -9,5 +9,6 @@ public interface IWalletService
   Task<List<WithdrawalDto>> GetWithdrawalsAsync(Guid userId);
   
   Task ProcessBookingIncomeAsync(Guid bookingId);
+  Task ProcessDepositAsync(Guid paymentId);
   Task<WithdrawalDto> RequestWithdrawalAsync(Guid userId, WithdrawRequestDto request);
 }

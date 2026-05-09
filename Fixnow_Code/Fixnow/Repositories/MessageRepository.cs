@@ -38,7 +38,7 @@ public class MessageRepository : IMessageRepository
 
     var totalCount = await query.CountAsync();
     var items = await query
-      .OrderByDescending(m => m.CreatedAt)
+      .OrderBy(m => m.CreatedAt)
       .Skip((page - 1) * pageSize)
       .Take(pageSize)
       .ToListAsync();

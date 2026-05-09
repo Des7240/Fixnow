@@ -4,6 +4,7 @@ import axiosInstance from '../../utils/axiosInstance';
 import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { useNotificationStore } from '../../stores/notificationStore';
+import { useAuthStore } from '../../stores/authStore';
 
 interface Notification {
   id: string;
@@ -20,6 +21,7 @@ export default function NotificationsList() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { fetchUnreadCount } = useNotificationStore();
+  const { user } = useAuthStore();
 
   useEffect(() => {
     fetchNotifications();
@@ -65,13 +67,13 @@ export default function NotificationsList() {
     
     // Navigate based on type and referenceId
     if (notification.referenceId) {
-      if (notification.type.startsWith('NEW_BOOKING')) {
-        // Worker view
-        navigate(`/worker/bookings/${notification.referenceId}`);
-      } else {
-        // Customer view
-        navigate(`/customer/bookings/${notification.referenceId}`);
+      if (notification.type === 'CHAT_MESSAGE') {
+        navigate(`/bookings/${notification.referenceId}/chat`);
+        return;
       }
+
+      const rolePrefix = user?.role?.toUpperCase() === 'WORKER' ? '/worker' : '/customer';
+      navigate(`${rolePrefix}/bookings/${notification.referenceId}`);
     }
   };
 

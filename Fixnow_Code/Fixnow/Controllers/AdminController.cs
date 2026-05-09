@@ -61,6 +61,14 @@ public class AdminController : ControllerBase
     return NoContent();
   }
 
+  [HttpPatch("workers/{id:guid}/activate")]
+  [ProducesResponseType(StatusCodes.Status204NoContent)]
+  public async Task<IActionResult> ActivateWorker([FromRoute] Guid id)
+  {
+    await _adminService.ActivateWorkerAsync(id, GetCurrentUserId());
+    return NoContent();
+  }
+
   [HttpGet("audit-logs")]
   [ProducesResponseType(typeof(List<AuditLogDto>), StatusCodes.Status200OK)]
   public async Task<IActionResult> GetAuditLogs()

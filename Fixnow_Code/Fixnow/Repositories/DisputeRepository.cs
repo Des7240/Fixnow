@@ -25,6 +25,8 @@ public class DisputeRepository : IDisputeRepository
   public async Task<Dispute?> FindByIdWithDetailsAsync(Guid disputeId)
   {
     return await _db.Disputes
+      .Include(d => d.Customer)
+      .Include(d => d.Worker)
       .Include(d => d.Evidences)
       .Include(d => d.Refunds)
       .FirstOrDefaultAsync(d => d.Id == disputeId);
@@ -33,6 +35,8 @@ public class DisputeRepository : IDisputeRepository
   public async Task<List<Dispute>> FindByUserIdAsync(Guid userId)
   {
     return await _db.Disputes
+      .Include(d => d.Customer)
+      .Include(d => d.Worker)
       .Where(d => d.CustomerId == userId || d.WorkerId == userId)
       .OrderByDescending(d => d.CreatedAt)
       .ToListAsync();
@@ -41,6 +45,8 @@ public class DisputeRepository : IDisputeRepository
   public async Task<List<Dispute>> GetAllAsync()
   {
     return await _db.Disputes
+      .Include(d => d.Customer)
+      .Include(d => d.Worker)
       .OrderByDescending(d => d.CreatedAt)
       .ToListAsync();
   }

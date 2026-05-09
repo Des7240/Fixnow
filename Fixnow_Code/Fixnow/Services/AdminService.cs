@@ -92,6 +92,17 @@ public class AdminService : IAdminService
     await _auditService.LogActionAsync("WORKER_SUSPENDED", "User", adminId, "ADMIN", workerId, null, null);
   }
 
+  public async Task ActivateWorkerAsync(Guid workerId, Guid adminId)
+  {
+    var worker = await _userRepo.FindByIdAsync(workerId)
+      ?? throw new KeyNotFoundException("Worker not found.");
+
+    worker.Status = "ACTIVE";
+    await _userRepo.UpdateAsync(worker);
+
+    await _auditService.LogActionAsync("WORKER_ACTIVATED", "User", adminId, "ADMIN", workerId, null, null);
+  }
+
   public async Task<DashboardSummaryDto> GetDashboardSummaryAsync()
   {
     var totalBookings = await _db.Bookings.CountAsync();

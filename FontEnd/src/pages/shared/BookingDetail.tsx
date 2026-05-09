@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, Clock, Phone, CheckCircle, ChevronLeft, Star, AlertCircle, ListOrdered, X, Check, MessageSquare, AlertTriangle, FileText } from 'lucide-react';
 import axiosInstance from '../../utils/axiosInstance';
 import { clsx } from 'clsx';
-import { message, Modal, Rate, Input } from 'antd';
+import { message, Modal, Rate, Input, Popconfirm } from 'antd';
 import { useAuthStore } from '../../stores/authStore';
 
 interface TimelineEvent {
@@ -118,6 +118,19 @@ export default function BookingDetail() {
       navigate('/worker');
     } catch (err: any) {
       message.error(err.response?.data?.message || 'Lỗi khi từ chối đơn');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    setActionLoading(true);
+    try {
+      await axiosInstance.patch(`/bookings/${id}/cancel`);
+      message.success('Đã hủy đơn hàng thành công');
+      fetchData();
+    } catch (err: any) {
+      message.error(err.response?.data?.message || 'Lỗi khi hủy đơn hàng');
     } finally {
       setActionLoading(false);
     }
@@ -466,9 +479,21 @@ export default function BookingDetail() {
             )}
 
             {isCustomer && ['PENDING', 'MATCHING', 'ASSIGNED'].includes(currentStatus || '') && (
-              <button className="w-full py-4 bg-white border-2 border-red-100 text-red-500 font-bold rounded-2xl hover:bg-red-50 transition-all">
-                Hủy đơn hàng
-              </button>
+              <Popconfirm
+                title="Hủy đơn hàng?"
+                description="Bạn có chắc chắn muốn hủy đơn hàng này không?"
+                onConfirm={handleCancel}
+                okText="Đồng ý"
+                cancelText="Quay lại"
+                okButtonProps={{ danger: true }}
+              >
+                <button 
+                  disabled={actionLoading}
+                  className="w-full py-4 bg-white border-2 border-red-100 text-red-500 font-bold rounded-2xl hover:bg-red-50 transition-all"
+                >
+                  Hủy đơn hàng
+                </button>
+              </Popconfirm>
             )}
           </div>
         </div>

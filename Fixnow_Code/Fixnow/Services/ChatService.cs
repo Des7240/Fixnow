@@ -14,6 +14,7 @@ public class ChatService : IChatService
 {
   private readonly IConversationRepository _conversationRepo;
   private readonly IMessageRepository _messageRepo;
+  private readonly IBookingRepository _bookingRepo;
   private readonly IHubContext<ChatHub> _hubContext;
   private readonly INotificationService _notificationService;
   private readonly AppDbContext _db;
@@ -21,15 +22,60 @@ public class ChatService : IChatService
   public ChatService(
     IConversationRepository conversationRepo,
     IMessageRepository messageRepo,
+    IBookingRepository bookingRepo,
     IHubContext<ChatHub> hubContext,
     INotificationService notificationService,
     AppDbContext db)
   {
     _conversationRepo = conversationRepo;
     _messageRepo = messageRepo;
+    _bookingRepo = bookingRepo;
     _hubContext = hubContext;
     _notificationService = notificationService;
     _db = db;
+  }
+
+  public async Task<ConversationDto> GetOrCreateConversationByBookingAsync(Guid bookingId, Guid userId)
+  {
+    var conversation = await _conversationRepo.FindByBookingAsync(bookingId);
+    if (conversation == null)
+    {
+      var booking = await _bookingRepo.FindByIdAsync(bookingId)
+        ?? throw new KeyNotFoundException("Booking not found.");
+
+      if (booking.CustomerId != userId && booking.WorkerId != userId)
+        throw new UnauthorizedAccessException("You are not part of this booking.");
+
+      if (!booking.WorkerId.HasValue)
+        throw new InvalidOperationException("Cannot start chat without an assigned worker.");
+
+      conversation = new Conversation
+      {
+        BookingId = bookingId,
+        CustomerId = booking.CustomerId,
+        WorkerId = booking.WorkerId.Value
+      };
+
+      await _conversationRepo.CreateAsync(conversation);
+      
+      // Reload to get navigation properties (Customer, Worker names)
+      conversation = await _db.Conversations
+        .Include(c => c.Customer)
+        .Include(c => c.Worker)
+        .FirstOrDefaultAsync(c => c.Id == conversation.Id);
+    }
+
+    return new ConversationDto
+    {
+      Id = conversation!.Id,
+      BookingId = conversation.BookingId,
+      CustomerId = conversation.CustomerId,
+      WorkerId = conversation.WorkerId,
+      CustomerName = conversation.Customer?.FullName ?? "Customer",
+      WorkerName = conversation.Worker?.FullName ?? "Worker",
+      CreatedAt = conversation.CreatedAt,
+      UnreadCount = 0
+    };
   }
 
   public async Task<List<ConversationDto>> GetConversationsAsync(Guid userId)

@@ -13,7 +13,9 @@ public class DisputeDto
   public Guid Id { get; set; }
   public Guid BookingId { get; set; }
   public Guid CustomerId { get; set; }
+  public string CustomerName { get; set; } = string.Empty;
   public Guid WorkerId { get; set; }
+  public string WorkerName { get; set; } = string.Empty;
   public string Reason { get; set; } = string.Empty;
   public string Status { get; set; } = string.Empty;
   public DateTime CreatedAt { get; set; }

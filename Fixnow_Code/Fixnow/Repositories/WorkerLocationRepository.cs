@@ -65,7 +65,7 @@ public class WorkerLocationRepository : IWorkerLocationRepository
   /// Workers are excluded if they have an active booking or stale location (older than 1 hour).
   /// </summary>
   public async Task<List<NearbyWorkerResult>> FindNearbyAvailableWorkersAsync(
-    double lat, double lng, Guid serviceId, double radiusMeters = 5000, int limit = 20)
+    double lat, double lng, Guid serviceId, double radiusMeters = 10000, int limit = 20)
   {
     var referencePoint = GeomFactory.CreatePoint(new Coordinate(lng, lat));
     var cutoff = DateTime.UtcNow.AddHours(-1);

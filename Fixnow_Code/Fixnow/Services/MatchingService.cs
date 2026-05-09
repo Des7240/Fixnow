@@ -38,9 +38,9 @@ public class MatchingService : IMatchingService
 
     var oldStatus = booking.Status;
 
-    // Find nearby available workers within 5km, matching the requested ServiceId
+    // Find nearby available workers within 10km, matching the requested ServiceId
     var nearbyWorkers = await _workerLocationRepo.FindNearbyAvailableWorkersAsync(
-      booking.Lat, booking.Lng, booking.ServiceId, radiusMeters: 5000, limit: 20);
+      booking.Lat, booking.Lng, booking.ServiceId, radiusMeters: 10000, limit: 20);
 
     // Update booking status to MATCHING (even if no workers found yet)
     booking.Status = BookingStatus.MATCHING;

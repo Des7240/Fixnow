@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle } from 'lucide-react';
+import { useAuthStore } from '../../stores/authStore';
 
 export default function PaymentReturn() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [status, setStatus] = useState<'LOADING' | 'SUCCESS' | 'FAILED'>('LOADING');
 
   useEffect(() => {
@@ -15,6 +17,16 @@ export default function PaymentReturn() {
       setStatus('FAILED');
     }
   }, [searchParams]);
+
+  const handleBack = () => {
+    if (user?.role === 'WORKER') {
+      // If it's a worker, usually they were in the Wallet or Dashboard
+      navigate('/worker/wallet');
+    } else {
+      // If customer
+      navigate('/customer/bookings');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
@@ -33,13 +45,13 @@ export default function PaymentReturn() {
             </div>
             <h2 className="text-2xl font-black text-gray-900 mb-2">Thanh toán thành công!</h2>
             <p className="text-gray-500 mb-8">
-              Cảm ơn bạn đã sử dụng dịch vụ. Thợ sẽ tiếp tục công việc ngay.
+              Giao dịch của bạn đã được xử lý thành công. Cảm ơn bạn đã sử dụng dịch vụ!
             </p>
             <button 
-              onClick={() => navigate('/customer/bookings')}
+              onClick={handleBack}
               className="w-full py-4 bg-gray-900 hover:bg-black text-white font-bold rounded-2xl shadow-xl shadow-gray-900/20 transition-all"
             >
-              Về danh sách đơn hàng
+              {user?.role === 'WORKER' ? 'Về ví thu nhập' : 'Về danh sách đơn hàng'}
             </button>
           </div>
         )}
@@ -54,10 +66,10 @@ export default function PaymentReturn() {
               Đã có lỗi xảy ra trong quá trình thanh toán hoặc bạn đã hủy giao dịch.
             </p>
             <button 
-              onClick={() => navigate('/customer/bookings')}
+              onClick={handleBack}
               className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl shadow-xl shadow-orange-500/20 transition-all"
             >
-              Thử lại sau
+              Quay lại
             </button>
           </div>
         )}

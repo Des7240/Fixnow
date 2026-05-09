@@ -1,4 +1,5 @@
 using Fixnow.DTOs.Payment;
+using Fixnow.DTOs.Wallet;
 using Fixnow.Entities;
 using Fixnow.Enums;
 using Fixnow.Repositories.Interfaces;
@@ -58,7 +59,8 @@ public class PaymentService : IPaymentService
       CustomerId = customerId,
       Provider = request.Provider,
       Amount = amount,
-      Status = PaymentStatus.PENDING
+      Status = PaymentStatus.PENDING,
+      Type = PaymentType.BOOKING
     };
 
     await _paymentRepo.CreateAsync(payment);
@@ -87,6 +89,48 @@ public class PaymentService : IPaymentService
     };
   }
 
+  public async Task<CreatePaymentResponseDto> CreateWalletDepositAsync(CreateWalletDepositRequestDto request, Guid userId, string ipAddress)
+  {
+    if (request.Amount < 10000) // Lowered from 50k for testing flexibility
+      throw new ArgumentException("Minimum deposit amount is 10,000 VND.");
+
+    var provider = _providers.FirstOrDefault(p => p.ProviderName.Equals(request.Provider.ToString(), StringComparison.InvariantCultureIgnoreCase))
+      ?? throw new NotSupportedException($"Provider {request.Provider} not supported.");
+
+    var payment = new Payment
+    {
+      CustomerId = userId,
+      Provider = request.Provider,
+      Amount = request.Amount,
+      Status = PaymentStatus.PENDING,
+      Type = PaymentType.WALLET_DEPOSIT
+    };
+
+    await _paymentRepo.CreateAsync(payment);
+
+    var apiBaseUrl = _config["App:ApiBaseUrl"] ?? "https://localhost:7154";
+    var returnUrl = $"{apiBaseUrl}/api/v1/payments/{request.Provider.ToString().ToLower()}/callback";
+
+    var paymentRequest = new PaymentRequestDto
+    {
+      PaymentId = payment.Id,
+      Amount = request.Amount,
+      Description = $"Wallet deposit top-up",
+      ReturnUrl = returnUrl,
+      IpAddress = ipAddress
+    };
+
+    var paymentUrl = await provider.CreatePaymentUrlAsync(paymentRequest);
+
+    await _auditService.LogActionAsync("DEPOSIT_CREATED", "Payment", userId, "USER", payment.Id, null, $"{{ \"amount\": {request.Amount}, \"provider\": \"{request.Provider}\" }}");
+
+    return new CreatePaymentResponseDto
+    {
+      PaymentId = payment.Id,
+      PaymentUrl = paymentUrl
+    };
+  }
+
   public async Task<PaymentResultDto> ProcessCallbackAsync(string providerName, IQueryCollection query)
   {
     var provider = _providers.FirstOrDefault(p => p.ProviderName.Equals(providerName, StringComparison.InvariantCultureIgnoreCase))
@@ -94,9 +138,6 @@ public class PaymentService : IPaymentService
 
     var result = await provider.VerifyCallbackAsync(query);
 
-    // Parse paymentId
-    // For VNPay, it's typically vnp_TxnRef. For MoMo, it could be extracted.
-    // To simplify, if we cannot get it, we just return the result.
     var paymentIdStr = providerName.ToUpper() == "VNPAY" ? query["vnp_TxnRef"].ToString() : query["paymentId"].ToString();
     if (!Guid.TryParse(paymentIdStr, out var paymentId))
     {
@@ -108,12 +149,11 @@ public class PaymentService : IPaymentService
     if (payment == null)
     {
       await LogCallbackRawAsync(providerName, result, false);
-      return result; // Invalid payment
+      return result;
     }
 
     await LogCallbackRawAsync(providerName, result, result.IsSuccess);
 
-    // Idempotency check
     if (payment.Status == PaymentStatus.SUCCESS || payment.Status == PaymentStatus.FAILED)
       return result;
 
@@ -132,30 +172,35 @@ public class PaymentService : IPaymentService
 
     if (result.IsSuccess)
     {
-      var booking = await _bookingRepo.FindByIdAsync(payment.BookingId);
-      if (booking != null)
+      if (payment.Type == PaymentType.BOOKING && payment.BookingId.HasValue)
       {
-        booking.PaymentStatus = BookingPaymentStatus.PAID;
-        await _bookingRepo.UpdateAsync(booking);
-
-        // Calculate financials
-        var platformFee = payment.Amount * 0.1m; // 10%
-        var workerIncome = payment.Amount - platformFee;
-
-        var financial = new BookingFinancial
+        var booking = await _bookingRepo.FindByIdAsync(payment.BookingId.Value);
+        if (booking != null)
         {
-          BookingId = booking.Id,
-          TotalAmount = payment.Amount,
-          PlatformFee = platformFee,
-          WorkerIncome = workerIncome
-        };
-        await _paymentRepo.CreateFinancialAsync(financial);
+          booking.PaymentStatus = BookingPaymentStatus.PAID;
+          await _bookingRepo.UpdateAsync(booking);
 
-        // Process wallet
-        await _walletService.ProcessBookingIncomeAsync(booking.Id);
+          var platformFee = payment.Amount * 0.1m;
+          var workerIncome = payment.Amount - platformFee;
 
-        await _auditService.LogActionAsync("PAYMENT_SUCCESS", "Payment", null, "SYSTEM", payment.Id, null, $"{{ \"amount\": {payment.Amount} }}");
+          var financial = new BookingFinancial
+          {
+            BookingId = booking.Id,
+            TotalAmount = payment.Amount,
+            PlatformFee = platformFee,
+            WorkerIncome = workerIncome
+          };
+          await _paymentRepo.CreateFinancialAsync(financial);
+
+          await _walletService.ProcessBookingIncomeAsync(booking.Id);
+        }
       }
+      else if (payment.Type == PaymentType.WALLET_DEPOSIT)
+      {
+        await _walletService.ProcessDepositAsync(payment.Id);
+      }
+
+      await _auditService.LogActionAsync("PAYMENT_SUCCESS", "Payment", null, "SYSTEM", payment.Id, null, $"{{ \"amount\": {payment.Amount}, \"type\": \"{payment.Type}\" }}");
     }
     else
     {

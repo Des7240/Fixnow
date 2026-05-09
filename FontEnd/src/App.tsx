@@ -34,6 +34,7 @@ import WorkersManagement from './pages/admin/WorkersManagement';
 import DisputeManagement from './pages/admin/DisputeManagement';
 import AdminDisputeDetail from './pages/admin/AdminDisputeDetail';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminSettings from './pages/admin/AdminSettings';
 
 function App() {
   return (
@@ -43,6 +44,12 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         
+        {/* Customer & Worker Shared Protected Routes */}
+        <Route element={<ProtectedRoute allowedRoles={['CUSTOMER', 'WORKER']} />}>
+          <Route path="/payment/result" element={<PaymentReturn />} />
+          <Route path="/bookings/:id/chat" element={<ChatRoom />} />
+        </Route>
+
         {/* Customer Routes */}
         <Route element={<ProtectedRoute allowedRoles={['CUSTOMER']} />}>
           <Route element={<CustomerLayout />}>
@@ -54,8 +61,6 @@ function App() {
           </Route>
           {/* Create Booking is full screen, outside bottom nav layout */}
           <Route path="/customer/booking/create" element={<CreateBooking />} />
-          <Route path="/payment/result" element={<PaymentReturn />} />
-          <Route path="/bookings/:id/chat" element={<ChatRoom />} />
           <Route path="/customer/bookings/:id/dispute" element={<CreateDispute />} />
         </Route>
 
@@ -72,7 +77,6 @@ function App() {
           {/* Full screen pages */}
           <Route path="/worker/bookings/:id/quotation/create" element={<CreateQuotation />} />
           <Route path="/worker/wallet" element={<WalletDashboard />} />
-          <Route path="/bookings/:id/chat" element={<ChatRoom />} />
         </Route>
 
         {/* Admin Routes */}
@@ -83,7 +87,7 @@ function App() {
             <Route path="/admin/workers" element={<WorkersManagement />} />
             <Route path="/admin/disputes" element={<DisputeManagement />} />
             <Route path="/admin/disputes/:id" element={<AdminDisputeDetail />} />
-            <Route path="/admin/settings" element={<div className="p-8 text-2xl font-bold">Settings</div>} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
           </Route>
         </Route>
 

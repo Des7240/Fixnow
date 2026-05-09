@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Wallet, ArrowDownCircle, ArrowUpCircle, History, Landmark } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { message, Modal, Input } from 'antd';
+import { message, Modal, Input, Radio } from 'antd';
 import axiosInstance from '../../utils/axiosInstance';
 import { clsx } from 'clsx';
 
@@ -12,7 +12,7 @@ interface WalletData {
 
 interface Transaction {
   id: string;
-  type: 'DEPOSIT' | 'WITHDRAWAL' | 'PAYMENT' | 'REFUND' | 'COMMISSION';
+  type: 'BOOKING_INCOME' | 'COMMISSION_FEE' | 'WITHDRAWAL' | 'REFUND' | 'DEPOSIT' | 'ADJUSTMENT';
   amount: number;
   createdAt: string;
   description: string;
@@ -30,6 +30,12 @@ export default function WalletDashboard() {
   const [bankInfo, setBankInfo] = useState('');
   const [withdrawing, setWithdrawing] = useState(false);
 
+  // Deposit Modal
+  const [isDepositOpen, setIsDepositOpen] = useState(false);
+  const [depositAmount, setDepositAmount] = useState('');
+  const [selectedProvider, setSelectedProvider] = useState<'VNPAY' | 'MOMO'>('VNPAY');
+  const [depositing, setDepositing] = useState(false);
+
   useEffect(() => {
     fetchWallet();
   }, []);
@@ -37,16 +43,43 @@ export default function WalletDashboard() {
   const fetchWallet = async () => {
     try {
       setLoading(true);
-      const res = await axiosInstance.get('/wallets/my-wallet');
+      const res = await axiosInstance.get('/wallet');
       setWallet(res.data);
       
-      const txRes = await axiosInstance.get('/wallets/transactions');
+      const txRes = await axiosInstance.get('/wallet/transactions');
       setTransactions(txRes.data);
     } catch (err) {
       console.error(err);
       message.error('Không thể tải thông tin ví');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeposit = async () => {
+    const amount = parseInt(depositAmount);
+    if (isNaN(amount) || amount < 10000) {
+      message.error('Số tiền nạp tối thiểu là 10,000đ');
+      return;
+    }
+
+    setDepositing(true);
+    try {
+      const res = await axiosInstance.post('/wallet/deposit', {
+        amount,
+        provider: selectedProvider
+      });
+      
+      if (res.data?.paymentUrl) {
+        message.loading('Đang chuyển hướng thanh toán...');
+        window.location.href = res.data.paymentUrl;
+      } else {
+        message.error('Không tạo được yêu cầu nạp tiền');
+      }
+    } catch (err: any) {
+      message.error(err.response?.data?.message || 'Lỗi khi nạp tiền');
+    } finally {
+      setDepositing(false);
     }
   };
 
@@ -67,7 +100,7 @@ export default function WalletDashboard() {
 
     setWithdrawing(true);
     try {
-      await axiosInstance.post('/wallets/withdraw', {
+      await axiosInstance.post('/wallet/withdraw', {
         amount,
         bankAccountInfo: bankInfo
       });
@@ -85,29 +118,41 @@ export default function WalletDashboard() {
 
   const getTxIcon = (type: string) => {
     switch (type) {
-      case 'DEPOSIT':
-      case 'PAYMENT':
-        return <ArrowDownCircle className="w-5 h-5 text-green-500" />;
-      case 'WITHDRAWAL':
+      case 'BOOKING_INCOME':
       case 'REFUND':
-      case 'COMMISSION':
+      case 'DEPOSIT':
+        return <ArrowDownCircle className="w-5 h-5 text-green-500" />;
+      case 'COMMISSION_FEE':
+      case 'WITHDRAWAL':
         return <ArrowUpCircle className="w-5 h-5 text-red-500" />;
       default:
         return <History className="w-5 h-5 text-gray-500" />;
     }
   };
 
-  const getTxSign = (type: string) => {
-    return ['DEPOSIT', 'PAYMENT'].includes(type) ? '+' : '-';
+  const getTxSign = (amount: number) => {
+    return amount > 0 ? '+' : '';
   };
 
-  const getTxColor = (type: string) => {
-    return ['DEPOSIT', 'PAYMENT'].includes(type) ? 'text-green-600' : 'text-red-600';
+  const getTxColor = (amount: number) => {
+    return amount > 0 ? 'text-green-600' : 'text-red-600';
+  };
+
+  const translateType = (type: string) => {
+    switch (type) {
+      case 'BOOKING_INCOME': return 'Thu nhập đơn hàng';
+      case 'COMMISSION_FEE': return 'Phí hệ thống';
+      case 'WITHDRAWAL': return 'Rút tiền';
+      case 'REFUND': return 'Hoàn tiền';
+      case 'DEPOSIT': return 'Nạp tiền vào ví';
+      case 'ADJUSTMENT': return 'Điều chỉnh';
+      default: return type;
+    }
   };
 
   if (loading && !wallet) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gray-50">
+      <div className="h-screen flex items-center justify-center bg-white">
         <span className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></span>
       </div>
     );
@@ -145,11 +190,14 @@ export default function WalletDashboard() {
             <span className="text-xs font-bold text-gray-700">Rút tiền</span>
           </button>
           
-          <button className="flex flex-col items-center gap-2 group opacity-50 cursor-not-allowed">
-            <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center">
-              <Wallet className="w-6 h-6 text-gray-400" />
+          <button 
+            onClick={() => setIsDepositOpen(true)}
+            className="flex flex-col items-center gap-2 group"
+          >
+            <div className="w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center group-hover:bg-orange-100 transition-all">
+              <Wallet className="w-6 h-6 text-orange-600" />
             </div>
-            <span className="text-xs font-bold text-gray-400">Nạp tiền</span>
+            <span className="text-xs font-bold text-gray-700">Nạp tiền</span>
           </button>
         </div>
       </div>
@@ -168,19 +216,19 @@ export default function WalletDashboard() {
               <div key={tx.id} className="bg-white p-4 rounded-3xl shadow-sm border border-gray-50 flex items-center gap-4">
                 <div className={clsx(
                   "w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0",
-                  ['DEPOSIT', 'PAYMENT'].includes(tx.type) ? 'bg-green-50' : 'bg-red-50'
+                  tx.amount > 0 ? 'bg-green-50' : 'bg-red-50'
                 )}>
                   {getTxIcon(tx.type)}
                 </div>
                 <div className="flex-1">
-                  <p className="font-bold text-gray-900 text-sm mb-0.5 line-clamp-1">{tx.description || tx.type}</p>
+                  <p className="font-bold text-gray-900 text-sm mb-0.5 line-clamp-1">{tx.description || translateType(tx.type)}</p>
                   <p className="text-xs text-gray-400 font-medium">
                     {new Date(tx.createdAt).toLocaleString('vi-VN')}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className={clsx("font-black text-sm", getTxColor(tx.type))}>
-                    {getTxSign(tx.type)}{(tx.amount).toLocaleString('vi-VN')}đ
+                  <p className={clsx("font-black text-sm", getTxColor(tx.amount))}>
+                    {getTxSign(tx.amount)}{(tx.amount).toLocaleString('vi-VN')}đ
                   </p>
                 </div>
               </div>
@@ -232,6 +280,55 @@ export default function WalletDashboard() {
             className="w-full py-4 bg-orange-500 text-white font-bold rounded-2xl shadow-lg shadow-orange-500/20 disabled:opacity-50 flex justify-center items-center"
           >
             {withdrawing ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : 'Xác nhận rút tiền'}
+          </button>
+        </div>
+      </Modal>
+
+      {/* Deposit Modal */}
+      <Modal
+        title="Nạp tiền vào ví"
+        open={isDepositOpen}
+        onCancel={() => setIsDepositOpen(false)}
+        footer={null}
+        centered
+        className="rounded-3xl overflow-hidden"
+      >
+        <div className="py-4 space-y-5">
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Số tiền muốn nạp (VND)</label>
+            <Input
+              type="number"
+              value={depositAmount}
+              onChange={e => setDepositAmount(e.target.value)}
+              placeholder="Tối thiểu 10,000đ"
+              className="py-3 px-4 rounded-xl font-bold text-lg"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Phương thức thanh toán</label>
+            <Radio.Group 
+              onChange={e => setSelectedProvider(e.target.value)} 
+              value={selectedProvider}
+              className="w-full"
+            >
+              <div className="grid grid-cols-1 gap-2">
+                <Radio.Button value="VNPAY" className="h-auto py-3 rounded-xl flex items-center gap-3">
+                   VNPay
+                </Radio.Button>
+                <Radio.Button value="MOMO" className="h-auto py-3 rounded-xl flex items-center gap-3">
+                   Ví MoMo
+                </Radio.Button>
+              </div>
+            </Radio.Group>
+          </div>
+
+          <button
+            onClick={handleDeposit}
+            disabled={depositing}
+            className="w-full py-4 bg-orange-500 text-white font-bold rounded-2xl shadow-lg shadow-orange-500/20 disabled:opacity-50 flex justify-center items-center"
+          >
+            {depositing ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : 'Nạp tiền ngay'}
           </button>
         </div>
       </Modal>

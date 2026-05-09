@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, FileBadge, AlertTriangle, CheckCircle, Wallet, TrendingUp } from 'lucide-react';
+import { Users, FileBadge, AlertTriangle, CheckCircle, Wallet, TrendingUp, Star, ListOrdered } from 'lucide-react';
 import axiosInstance from '../../utils/axiosInstance';
 import { message } from 'antd';
 
@@ -8,7 +8,10 @@ export default function AdminDashboard() {
     totalUsers: 0,
     totalWorkers: 0,
     pendingKYC: 0,
-    activeDisputes: 0
+    activeDisputes: 0,
+    totalBookings: 0,
+    completedBookings: 0,
+    averageRating: 0
   });
 
   useEffect(() => {
@@ -17,36 +20,32 @@ export default function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
-      // In a real scenario, this would be a single /admin/stats endpoint
-      // Here we mock the calls using existing endpoints
-      const [kycRes, workersRes, disputesRes] = await Promise.all([
-        axiosInstance.get('/admin/workers/kyc-pending'),
-        axiosInstance.get('/admin/workers'),
-        axiosInstance.get('/disputes/admin/all')
-      ]);
+      const res = await axiosInstance.get('/admin/dashboard');
+      const data = res.data;
 
+      // Also need total users (customers + workers)
+      const usersRes = await axiosInstance.get('/admin/workers'); // Temporary until we have a proper user list API
+      
       setStats({
-        totalUsers: workersRes.data.length * 3, // Mock customer count
-        totalWorkers: workersRes.data.length,
-        pendingKYC: kycRes.data.length,
-        activeDisputes: disputesRes.data.filter((d: any) => d.status === 'OPEN' || d.status === 'INVESTIGATING').length
+        totalUsers: data.totalWorkers + 5, // Approximate until we have total users count
+        totalWorkers: data.totalWorkers,
+        pendingKYC: data.pendingKycs,
+        activeDisputes: 0, // Placeholder until dispute stats added to dashboard API
+        totalBookings: data.totalBookings,
+        completedBookings: data.completedBookings,
+        averageRating: data.averageSystemRating
       });
     } catch (err) {
-      console.log('Using mock data for dashboard due to API limits');
-      setStats({
-        totalUsers: 1254,
-        totalWorkers: 156,
-        pendingKYC: 8,
-        activeDisputes: 3
-      });
+      console.error('Error fetching admin stats:', err);
+      message.error('Không thể tải thông tin thống kê');
     }
   };
 
   const statCards = [
-    { label: 'Tổng số Người dùng', value: stats.totalUsers, icon: Users, color: 'text-blue-500', bg: 'bg-blue-50' },
+    { label: 'Tổng số Đơn hàng', value: stats.totalBookings, icon: ListOrdered, color: 'text-blue-500', bg: 'bg-blue-50' },
     { label: 'Thợ dịch vụ', value: stats.totalWorkers, icon: Wallet, color: 'text-green-500', bg: 'bg-green-50' },
     { label: 'Yêu cầu KYC chờ duyệt', value: stats.pendingKYC, icon: FileBadge, color: 'text-yellow-500', bg: 'bg-yellow-50' },
-    { label: 'Khiếu nại đang mở', value: stats.activeDisputes, icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-50' }
+    { label: 'Đánh giá hệ thống', value: stats.averageRating + ' ⭐', icon: Star, color: 'text-orange-500', bg: 'bg-orange-50' }
   ];
 
   return (

@@ -119,7 +119,6 @@ public class DisputeService : IDisputeService
   public async Task<List<DisputeDto>> GetMyDisputesAsync(Guid userId)
   {
     var disputes = await _disputeRepo.FindByUserIdAsync(userId);
-    // Since we don't eager load evidences in FindByUserIdAsync, we just map basic properties
     return disputes.Select(MapToDto).ToList();
   }
 
@@ -213,7 +212,9 @@ public class DisputeService : IDisputeService
       Id = dispute.Id,
       BookingId = dispute.BookingId,
       CustomerId = dispute.CustomerId,
+      CustomerName = dispute.Customer?.FullName ?? "Unknown",
       WorkerId = dispute.WorkerId,
+      WorkerName = dispute.Worker?.FullName ?? "Unknown",
       Reason = dispute.Reason,
       Status = dispute.Status.ToString(),
       CreatedAt = dispute.CreatedAt,

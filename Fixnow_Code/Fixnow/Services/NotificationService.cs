@@ -8,25 +8,23 @@ using Microsoft.AspNetCore.SignalR;
 namespace Fixnow.Services;
 
 /// <summary>
-/// Enhanced notification service that writes in-app notifications to DB
-/// in addition to console logging and real-time SignalR push.
-/// Replace logger calls with Firebase FCM in production.
+/// Enhanced notification service using SignalR for real-time and Hangfire for reliability.
 /// </summary>
 public class NotificationService : INotificationService
 {
-  private readonly ILogger<NotificationService> _logger;
   private readonly INotificationRepository _notificationRepo;
-  private readonly IBackgroundJobClient _backgroundJobClient;
   private readonly IHubContext<NotificationHub> _hubContext;
+  private readonly IBackgroundJobClient _backgroundJobClient;
+  private readonly ILogger<NotificationService> _logger;
 
   public NotificationService(
-    ILogger<NotificationService> logger,
     INotificationRepository notificationRepo,
+    ILogger<NotificationService> logger,
     IBackgroundJobClient backgroundJobClient,
     IHubContext<NotificationHub> hubContext)
   {
-    _logger = logger;
     _notificationRepo = notificationRepo;
+    _logger = logger;
     _backgroundJobClient = backgroundJobClient;
     _hubContext = hubContext;
   }
@@ -108,56 +106,58 @@ public class NotificationService : INotificationService
       "[NOTIFY] Customer {CustomerId} → Booking {BookingId} status changed to '{Status}'",
       customerId, bookingId, status);
 
-    var (title, content) = status switch
-    {
-      "ON_THE_WAY" => ("Thợ đang trên đường đến!", "Thợ sẽ có mặt tại địa chỉ của bạn trong thời gian ngắn."),
-      "WORKING"    => ("Thợ đang làm việc", "Công việc sửa chữa đang được thực hiện."),
-      "COMPLETED"  => ("Hoàn thành! Hãy đánh giá dịch vụ", "Công việc đã hoàn thành. Hãy để lại đánh giá nhé!"),
-      "CANCELLED"  => ("Đơn hàng đã bị huỷ", "Đơn hàng của bạn đã bị huỷ."),
-      _ => ($"Trạng thái đơn: {status}", $"Đơn hàng của bạn hiện là: {status}")
-    };
-
     await _notificationRepo.AddAsync(new Notification
     {
       UserId = customerId,
-      Title = title,
-      Content = content,
-      Type = $"BOOKING_{status}",
+      Title = "Cập nhật đơn hàng",
+      Content = $"Đơn hàng của bạn đã chuyển sang trạng thái: {status}",
+      Type = "BOOKING_STATUS_UPDATE",
       ReferenceId = bookingId
     });
 
     await _hubContext.Clients.User(customerId.ToString()).SendAsync("ReceiveNotification", new
     {
-      Type = $"BOOKING_{status}",
+      Type = "BOOKING_STATUS_UPDATE",
       ReferenceId = bookingId,
-      Title = title,
-      Message = content
+      Message = $"Đơn hàng của bạn hiện là: {status}"
     });
   }
 
   /// <inheritdoc/>
-  public Task NotifyNewChatMessageAsync(Guid userId, Guid bookingId, string senderName, string messagePreview)
+  public Task NotifyWorkerBookingStatusAsync(Guid workerId, Guid bookingId, string status)
   {
-    _backgroundJobClient.Enqueue(() => DoNotifyNewChatMessageAsync(userId, bookingId, senderName, messagePreview));
+    _backgroundJobClient.Enqueue(() => DoNotifyWorkerBookingStatusAsync(workerId, bookingId, status));
     return Task.CompletedTask;
   }
 
   [AutomaticRetry(Attempts = 3)]
-  public async Task DoNotifyNewChatMessageAsync(Guid userId, Guid bookingId, string senderName, string messagePreview)
+  public async Task DoNotifyWorkerBookingStatusAsync(Guid workerId, Guid bookingId, string status)
   {
     _logger.LogInformation(
-      "[NOTIFY] User {UserId} → New chat message from '{Sender}'",
-      userId, senderName);
+      "[NOTIFY] Worker {WorkerId} → Booking {BookingId} status changed to '{Status}'",
+      workerId, bookingId, status);
 
     await _notificationRepo.AddAsync(new Notification
     {
-      UserId = userId,
-      Title = $"Tin nhắn mới từ {senderName}",
-      Content = messagePreview,
-      Type = "CHAT_MESSAGE",
+      UserId = workerId,
+      Title = "Cập nhật đơn hàng",
+      Content = $"Đơn hàng bạn đang nhận đã chuyển sang trạng thái: {status}",
+      Type = "BOOKING_STATUS_UPDATE",
       ReferenceId = bookingId
     });
 
+    await _hubContext.Clients.User(workerId.ToString()).SendAsync("ReceiveNotification", new
+    {
+      Type = "BOOKING_STATUS_UPDATE",
+      ReferenceId = bookingId,
+      Message = $"Đơn hàng đang nhận hiện là: {status}"
+    });
+  }
+
+  /// <inheritdoc/>
+  public async Task NotifyNewChatMessageAsync(Guid userId, Guid bookingId, string senderName, string messagePreview)
+  {
+    // Skip persistent notification storage for chat to avoid clutter
     await _hubContext.Clients.User(userId.ToString()).SendAsync("ReceiveNotification", new
     {
       Type = "CHAT_MESSAGE",

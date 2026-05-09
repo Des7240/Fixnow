@@ -15,6 +15,9 @@ public interface INotificationService
   /// <summary>Notifies a customer that their booking was cancelled or no worker found.</summary>
   Task NotifyCustomerBookingStatusAsync(Guid customerId, Guid bookingId, string status);
 
+  /// <summary>Notifies a worker that an assigned booking was cancelled.</summary>
+  Task NotifyWorkerBookingStatusAsync(Guid workerId, Guid bookingId, string status);
+
   /// <summary>Notifies a user about a new chat message.</summary>
   Task NotifyNewChatMessageAsync(Guid userId, Guid bookingId, string senderName, string messagePreview);
 }
