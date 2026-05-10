@@ -12,13 +12,20 @@ public class AdminService : IAdminService
 {
   private readonly IWorkerKycRepository _kycRepo;
   private readonly IUserRepository _userRepo;
+  private readonly IWorkerServiceRepository _workerServiceRepo;
   private readonly AppDbContext _db;
   private readonly IAuditService _auditService;
 
-  public AdminService(IWorkerKycRepository kycRepo, IUserRepository userRepo, AppDbContext db, IAuditService auditService)
+  public AdminService(
+    IWorkerKycRepository kycRepo, 
+    IUserRepository userRepo, 
+    IWorkerServiceRepository workerServiceRepo,
+    AppDbContext db, 
+    IAuditService auditService)
   {
     _kycRepo = kycRepo;
     _userRepo = userRepo;
+    _workerServiceRepo = workerServiceRepo;
     _db = db;
     _auditService = auditService;
   }
@@ -38,6 +45,20 @@ public class AdminService : IAdminService
       CitizenFrontUrl = k.CitizenFrontUrl,
       CitizenBackUrl = k.CitizenBackUrl,
       SelfieUrl = k.SelfieUrl
+    }).ToList();
+  }
+
+  public async Task<List<UserDto>> GetAllUsersAsync()
+  {
+    var users = await _userRepo.GetAllAsync();
+    return users.Select(u => new UserDto
+    {
+      Id = u.Id,
+      Email = u.Email,
+      FullName = u.FullName,
+      Role = u.Role.ToString(),
+      Status = u.Status,
+      CreatedAt = u.CreatedAt
     }).ToList();
   }
 
@@ -81,26 +102,25 @@ public class AdminService : IAdminService
     };
   }
 
+  public async Task UpdateUserStatusAsync(Guid userId, string status, Guid adminId)
+  {
+    var user = await _userRepo.FindByIdAsync(userId)
+      ?? throw new KeyNotFoundException("User not found.");
+
+    user.Status = status;
+    await _userRepo.UpdateAsync(user);
+
+    await _auditService.LogActionAsync("USER_STATUS_UPDATED", "User", adminId, "ADMIN", userId, null, $"{{ \"newStatus\": \"{status}\" }}");
+  }
+
   public async Task SuspendWorkerAsync(Guid workerId, Guid adminId)
   {
-    var worker = await _userRepo.FindByIdAsync(workerId)
-      ?? throw new KeyNotFoundException("Worker not found.");
-
-    worker.Status = "BANNED";
-    await _userRepo.UpdateAsync(worker);
-
-    await _auditService.LogActionAsync("WORKER_SUSPENDED", "User", adminId, "ADMIN", workerId, null, null);
+    await UpdateUserStatusAsync(workerId, "BANNED", adminId);
   }
 
   public async Task ActivateWorkerAsync(Guid workerId, Guid adminId)
   {
-    var worker = await _userRepo.FindByIdAsync(workerId)
-      ?? throw new KeyNotFoundException("Worker not found.");
-
-    worker.Status = "ACTIVE";
-    await _userRepo.UpdateAsync(worker);
-
-    await _auditService.LogActionAsync("WORKER_ACTIVATED", "User", adminId, "ADMIN", workerId, null, null);
+    await UpdateUserStatusAsync(workerId, "ACTIVE", adminId);
   }
 
   public async Task<DashboardSummaryDto> GetDashboardSummaryAsync()
@@ -127,5 +147,25 @@ public class AdminService : IAdminService
       PendingKycs = pendingKycs,
       AverageSystemRating = Math.Round(avgRating, 2)
     };
+  }
+
+  public async Task<List<PendingWorkerServiceDto>> GetPendingWorkerServicesAsync()
+  {
+    var pending = await _workerServiceRepo.GetPendingServicesAsync();
+    return pending.Select(ws => new PendingWorkerServiceDto
+    {
+      WorkerId = ws.WorkerId,
+      WorkerName = ws.Worker.FullName,
+      WorkerEmail = ws.Worker.Email,
+      ServiceId = ws.ServiceId,
+      ServiceName = ws.Service.Name,
+      Status = ws.Status
+    }).ToList();
+  }
+
+  public async Task ReviewWorkerServiceAsync(Guid workerId, Guid serviceId, Guid adminId, ReviewWorkerServiceDto request)
+  {
+    await _workerServiceRepo.UpdateServiceStatusAsync(workerId, serviceId, request.Status);
+    await _auditService.LogActionAsync($"WORKER_SERVICE_{request.Status}", "WorkerService", adminId, "ADMIN", workerId, null, $"{{ \"serviceId\": \"{serviceId}\" }}");
   }
 }

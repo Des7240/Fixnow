@@ -10,6 +10,7 @@ public interface IUserRepository
 {
   Task<User?> FindByEmailAsync(string email);
   Task<User?> FindByIdAsync(Guid id);
+  Task<List<User>> GetAllAsync();
   Task<List<User>> GetByRoleAsync(UserRole role);
   Task<bool> ExistsByEmailAsync(string email);
   Task<User> CreateAsync(User user);

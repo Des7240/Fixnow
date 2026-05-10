@@ -110,7 +110,7 @@ public class BookingService : IBookingService
     if (booking.Status == BookingStatus.MATCHING)
     {
       var workerLoc = await _context.WorkerLocations.FindAsync(requesterId);
-      var hasSkill = await _context.WorkerServices.AnyAsync(ws => ws.WorkerId == requesterId && ws.ServiceId == booking.ServiceId);
+      var hasSkill = await _context.WorkerServices.AnyAsync(ws => ws.WorkerId == requesterId && ws.ServiceId == booking.ServiceId && ws.Status == Enums.WorkerServiceStatus.APPROVED);
       
       var isNearby = workerLoc != null && workerLoc.Location.IsWithinDistance(booking.Location, 10000); // 10km
       isEligibleWorker = hasSkill && isNearby;
@@ -150,7 +150,7 @@ public class BookingService : IBookingService
 
     // Verify worker eligibility (Proximity + Skills)
     var workerLoc = await _context.WorkerLocations.FindAsync(workerId);
-    var hasSkill = await _context.WorkerServices.AnyAsync(ws => ws.WorkerId == workerId && ws.ServiceId == booking.ServiceId);
+    var hasSkill = await _context.WorkerServices.AnyAsync(ws => ws.WorkerId == workerId && ws.ServiceId == booking.ServiceId && ws.Status == Enums.WorkerServiceStatus.APPROVED);
     var isNearby = workerLoc != null && workerLoc.Location.IsWithinDistance(booking.Location, 10000);
 
     if (!hasSkill || !isNearby)

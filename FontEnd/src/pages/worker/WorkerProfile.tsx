@@ -21,6 +21,7 @@ export default function WorkerProfile() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [skillStatuses, setSkillStatuses] = useState<Record<string, string>>({});
   const [availableServices, setAvailableServices] = useState<{id: string, name: string, iconUrl?: string}[]>([]);
   const [ratingSummary, setRatingSummary] = useState({ averageRating: 0, totalReviews: 0 });
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -38,6 +39,11 @@ export default function WorkerProfile() {
           setValue('experienceYears', res.data.experienceYears);
           if (res.data.skills) {
             setSelectedSkills(res.data.skills.map((s: any) => s.serviceId));
+            const statuses: Record<string, string> = {};
+            res.data.skills.forEach((s: any) => {
+              statuses[s.serviceId] = s.status;
+            });
+            setSkillStatuses(statuses);
           }
           if (user?.id) {
             fetchReviews(user.id);
@@ -65,9 +71,14 @@ export default function WorkerProfile() {
   }, [setValue, user?.id]);
 
   const toggleSkill = (id: string) => {
-    setSelectedSkills(prev => 
-      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
-    );
+    setSelectedSkills(prev => {
+      const isSelecting = !prev.includes(id);
+      if (isSelecting && skillStatuses[id] === 'REJECTED') {
+        // Clear rejected status locally to show as pending when re-selecting
+        setSkillStatuses(prevStatuses => ({ ...prevStatuses, [id]: 'PENDING' }));
+      }
+      return isSelecting ? [...prev, id] : prev.filter(s => s !== id);
+    });
   };
 
   const onSubmit = async (data: any) => {
@@ -77,9 +88,19 @@ export default function WorkerProfile() {
         bio: data.bio,
         experienceYears: parseInt(data.experienceYears) || 0
       });
-      await axiosInstance.post('/workers/profile/skills', {
+      const res = await axiosInstance.post('/workers/profile/skills', {
         serviceIds: selectedSkills
       });
+      
+      if (res.data && res.data.skills) {
+        setSelectedSkills(res.data.skills.map((s: any) => s.serviceId));
+        const statuses: Record<string, string> = {};
+        res.data.skills.forEach((s: any) => {
+          statuses[s.serviceId] = s.status;
+        });
+        setSkillStatuses(statuses);
+      }
+
       message.success('Cập nhật hồ sơ thành công!');
     } catch (err) {
       message.error('Có lỗi xảy ra khi cập nhật');
@@ -169,21 +190,40 @@ export default function WorkerProfile() {
             <p className="text-xs text-gray-500 mb-4">Hệ thống sẽ chỉ phát đơn phù hợp với kỹ năng bạn chọn.</p>
             
             <div className="grid grid-cols-2 gap-3">
-              {availableServices.map(srv => (
-                <div 
-                  key={srv.id}
-                  onClick={() => toggleSkill(srv.id)}
-                  className={clsx(
-                    "flex flex-col items-center p-3 rounded-xl border-2 transition-all cursor-pointer",
-                    selectedSkills.includes(srv.id)
-                      ? "border-orange-500 bg-orange-50 text-orange-700"
-                      : "border-gray-100 bg-gray-50 text-gray-600"
-                  )}
-                >
-                  <span className="text-2xl mb-1">{srv.iconUrl ? <img src={srv.iconUrl} alt={srv.name} className="w-8 h-8 rounded-full" /> : '⚡'}</span>
-                  <span className="text-xs font-semibold">{srv.name}</span>
-                </div>
-              ))}
+              {availableServices.map(srv => {
+                const isSelected = selectedSkills.includes(srv.id);
+                const status = skillStatuses[srv.id] || 'PENDING';
+                
+                return (
+                  <div 
+                    key={srv.id}
+                    onClick={() => toggleSkill(srv.id)}
+                    className={clsx(
+                      "relative flex flex-col items-center p-3 rounded-xl border-2 transition-all cursor-pointer",
+                      isSelected
+                        ? status === 'APPROVED' 
+                          ? "border-green-500 bg-green-50 text-green-700"
+                          : status === 'REJECTED'
+                            ? "border-red-500 bg-red-50 text-red-700"
+                            : "border-orange-500 bg-orange-50 text-orange-700"
+                        : "border-gray-100 bg-gray-50 text-gray-600"
+                    )}
+                  >
+                    {isSelected && (
+                      <div className={clsx(
+                        "absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase",
+                        status === 'APPROVED' ? "bg-green-100 text-green-700" :
+                        status === 'REJECTED' ? "bg-red-100 text-red-700" :
+                        "bg-orange-100 text-orange-700"
+                      )}>
+                        {status === 'APPROVED' ? 'Đã duyệt' : status === 'REJECTED' ? 'Từ chối' : 'Đang chờ'}
+                      </div>
+                    )}
+                    <span className="text-2xl mb-1 mt-2">{srv.iconUrl ? <img src={srv.iconUrl} alt={srv.name} className="w-8 h-8 rounded-full" /> : '⚡'}</span>
+                    <span className="text-xs font-semibold">{srv.name}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

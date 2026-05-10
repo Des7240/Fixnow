@@ -45,6 +45,22 @@ public class AdminController : ControllerBase
     return Ok(result);
   }
 
+  [HttpGet("users")]
+  [ProducesResponseType(typeof(List<UserDto>), StatusCodes.Status200OK)]
+  public async Task<IActionResult> GetAllUsers()
+  {
+    var result = await _adminService.GetAllUsersAsync();
+    return Ok(result);
+  }
+
+  [HttpPatch("users/{userId:guid}/status")]
+  [ProducesResponseType(StatusCodes.Status204NoContent)]
+  public async Task<IActionResult> UpdateUserStatus([FromRoute] Guid userId, [FromBody] UpdateUserStatusDto request)
+  {
+    await _adminService.UpdateUserStatusAsync(userId, request.Status, GetCurrentUserId());
+    return NoContent();
+  }
+
   [HttpPatch("kyc/{id:guid}")]
   [ProducesResponseType(typeof(KycResponseDto), StatusCodes.Status200OK)]
   public async Task<IActionResult> ReviewKyc([FromRoute] Guid id, [FromBody] ReviewKycDto request)
@@ -75,6 +91,22 @@ public class AdminController : ControllerBase
   {
     var logs = await _auditService.GetRecentAuditLogsAsync();
     return Ok(logs);
+  }
+
+  [HttpGet("workers/services/pending")]
+  [ProducesResponseType(typeof(List<PendingWorkerServiceDto>), StatusCodes.Status200OK)]
+  public async Task<IActionResult> GetPendingWorkerServices()
+  {
+    var pending = await _adminService.GetPendingWorkerServicesAsync();
+    return Ok(pending);
+  }
+
+  [HttpPatch("workers/{workerId:guid}/services/{serviceId:guid}")]
+  [ProducesResponseType(StatusCodes.Status204NoContent)]
+  public async Task<IActionResult> ReviewWorkerService([FromRoute] Guid workerId, [FromRoute] Guid serviceId, [FromBody] ReviewWorkerServiceDto request)
+  {
+    await _adminService.ReviewWorkerServiceAsync(workerId, serviceId, GetCurrentUserId(), request);
+    return NoContent();
   }
 
   private Guid GetCurrentUserId()

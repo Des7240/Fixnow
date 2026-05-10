@@ -10,8 +10,9 @@ export default function AdminLayout() {
 
   const navItems = [
     { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/admin/users', icon: Users, label: 'Quản lý Người dùng' },
     { path: '/admin/kyc', icon: FileBadge, label: 'Xét duyệt KYC' },
-    { path: '/admin/workers', icon: Users, label: 'Quản lý Thợ' },
+    { path: '/admin/skills', icon: FileBadge, label: 'Duyệt Kỹ Năng' },
     { path: '/admin/disputes', icon: AlertTriangle, label: 'Quản lý Khiếu nại' },
     { path: '/admin/settings', icon: Settings, label: 'Cài đặt' },
   ];

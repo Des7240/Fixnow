@@ -33,6 +33,15 @@ public class UserRepository : IUserRepository
   }
 
   /// <inheritdoc/>
+  public async Task<List<User>> GetAllAsync()
+  {
+    return await _context.Users
+      .Include(u => u.WorkerProfile)
+      .OrderByDescending(u => u.CreatedAt)
+      .ToListAsync();
+  }
+
+  /// <inheritdoc/>
   public async Task<List<User>> GetByRoleAsync(UserRole role)
   {
     return await _context.Users

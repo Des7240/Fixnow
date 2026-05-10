@@ -30,11 +30,12 @@ import CreateDispute from './pages/shared/CreateDispute';
 
 import AdminLayout from './layouts/AdminLayout';
 import AdminKYC from './pages/admin/AdminKYC';
-import WorkersManagement from './pages/admin/WorkersManagement';
 import DisputeManagement from './pages/admin/DisputeManagement';
 import AdminDisputeDetail from './pages/admin/AdminDisputeDetail';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminSettings from './pages/admin/AdminSettings';
+import AdminWorkerServices from './pages/admin/AdminWorkerServices';
+import UsersManagement from './pages/admin/UsersManagement';
 
 function App() {
   return (
@@ -83,8 +84,9 @@ function App() {
         <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
           <Route element={<AdminLayout />}>
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/users" element={<UsersManagement />} />
             <Route path="/admin/kyc" element={<AdminKYC />} />
-            <Route path="/admin/workers" element={<WorkersManagement />} />
+            <Route path="/admin/skills" element={<AdminWorkerServices />} />
             <Route path="/admin/disputes" element={<DisputeManagement />} />
             <Route path="/admin/disputes/:id" element={<AdminDisputeDetail />} />
             <Route path="/admin/settings" element={<AdminSettings />} />

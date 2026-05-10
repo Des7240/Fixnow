@@ -98,7 +98,8 @@ public class WorkerProfileService : IWorkerProfileService
       Skills = services.Select(s => new WorkerServiceDto
       {
         ServiceId = s.ServiceId,
-        ServiceName = s.Service.Name
+        ServiceName = s.Service.Name,
+        Status = s.Status.ToString()
       }).ToList()
     };
   }

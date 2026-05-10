@@ -92,7 +92,7 @@ public class WorkerLocationRepository : IWorkerLocationRepository
       .Where(wl => wl.Worker.Role == UserRole.WORKER)
       .Where(wl => wl.Worker.Status == "ACTIVE")
       .Where(wl => wl.Worker.WorkerProfile != null && wl.Worker.WorkerProfile.AvailabilityStatus == WorkerAvailability.ONLINE)
-      .Where(wl => wl.Worker.WorkerServices.Any(ws => ws.ServiceId == serviceId))
+      .Where(wl => wl.Worker.WorkerServices.Any(ws => ws.ServiceId == serviceId && ws.Status == Enums.WorkerServiceStatus.APPROVED))
       .Where(wl => wl.UpdatedAt >= cutoff)
       .Where(wl => !busyWorkerIds.Contains(wl.WorkerId))
       .Where(wl => wl.Location.IsWithinDistance(referencePoint, radiusMeters))

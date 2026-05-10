@@ -24,21 +24,57 @@ public class WorkerServiceRepository : IWorkerServiceRepository
 
   public async Task UpdateWorkerServicesAsync(Guid workerId, List<Guid> serviceIds)
   {
-    // Remove existing services
     var existing = await _context.WorkerServices
       .Where(ws => ws.WorkerId == workerId)
       .ToListAsync();
     
-    _context.WorkerServices.RemoveRange(existing);
+    var existingServiceIds = existing.Select(e => e.ServiceId).ToList();
 
-    // Add new ones
-    var newServices = serviceIds.Select(id => new WorkerService
+    // Remove services that are no longer requested
+    var toRemove = existing.Where(e => !serviceIds.Contains(e.ServiceId)).ToList();
+    _context.WorkerServices.RemoveRange(toRemove);
+
+    // Update existing ones that were REJECTED back to PENDING if still selected
+    var toReSubmit = existing
+      .Where(e => serviceIds.Contains(e.ServiceId) && e.Status == Enums.WorkerServiceStatus.REJECTED)
+      .ToList();
+    
+    foreach (var ws in toReSubmit)
+    {
+      ws.Status = Enums.WorkerServiceStatus.PENDING;
+    }
+
+    // Add new ones with PENDING status
+    var toAddIds = serviceIds.Except(existingServiceIds).ToList();
+    var newServices = toAddIds.Select(id => new WorkerService
     {
       WorkerId = workerId,
-      ServiceId = id
+      ServiceId = id,
+      Status = Enums.WorkerServiceStatus.PENDING
     });
 
     _context.WorkerServices.AddRange(newServices);
     await _context.SaveChangesAsync();
+  }
+
+  public async Task<List<WorkerService>> GetPendingServicesAsync()
+  {
+    return await _context.WorkerServices
+      .Include(ws => ws.Worker)
+      .Include(ws => ws.Service)
+      .Where(ws => ws.Status == Enums.WorkerServiceStatus.PENDING)
+      .ToListAsync();
+  }
+
+  public async Task UpdateServiceStatusAsync(Guid workerId, Guid serviceId, Enums.WorkerServiceStatus status)
+  {
+    var workerService = await _context.WorkerServices
+      .FirstOrDefaultAsync(ws => ws.WorkerId == workerId && ws.ServiceId == serviceId);
+      
+    if (workerService != null)
+    {
+      workerService.Status = status;
+      await _context.SaveChangesAsync();
+    }
   }
 }
