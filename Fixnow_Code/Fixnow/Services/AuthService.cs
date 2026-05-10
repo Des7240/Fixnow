@@ -94,6 +94,25 @@ public class AuthService : IAuthService
       await _refreshTokenRepo.RevokeAsync(token);
   }
 
+  /// <inheritdoc/>
+  public async Task ChangePasswordAsync(Guid userId, ChangePasswordRequestDto request)
+  {
+    var user = await _userRepo.FindByIdAsync(userId)
+      ?? throw new KeyNotFoundException("User not found.");
+
+    var isValid = BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash);
+    if (!isValid)
+    {
+      await _auditService.LogActionAsync("CHANGE_PASSWORD_FAILED", "User", userId, user.Role.ToString(), userId, null, "{ \"reason\": \"Invalid old password\" }");
+      throw new UnauthorizedAccessException("Mật khẩu cũ không chính xác.");
+    }
+
+    user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+    await _userRepo.UpdateAsync(user);
+
+    await _auditService.LogActionAsync("CHANGE_PASSWORD_SUCCESS", "User", userId, user.Role.ToString(), userId, null, null);
+  }
+
   /// <summary>Builds a full auth response with new access + refresh tokens.</summary>
   private async Task<AuthResponseDto> BuildAuthResponseAsync(User user)
   {

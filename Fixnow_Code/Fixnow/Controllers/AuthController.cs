@@ -84,6 +84,18 @@ public class AuthController : ControllerBase
     return Ok(new { message = "Logged out successfully." });
   }
 
+  /// <summary>Change current user's password.</summary>
+  [HttpPost("change-password")]
+  [Authorize]
+  [ProducesResponseType(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequestDto request)
+  {
+    var userId = GetCurrentUserId();
+    await _authService.ChangePasswordAsync(userId, request);
+    return Ok(new { message = "Đổi mật khẩu thành công." });
+  }
+
   /// <summary>Get current authenticated user info.</summary>
   [HttpGet("me")]
   [Authorize]
@@ -117,5 +129,11 @@ public class AuthController : ControllerBase
     };
 
     Response.Cookies.Append("refreshToken", token, cookieOptions);
+  }
+
+  private Guid GetCurrentUserId()
+  {
+    var sub = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+    return sub != null ? Guid.Parse(sub) : throw new UnauthorizedAccessException();
   }
 }

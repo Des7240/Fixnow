@@ -1,12 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuthStore } from '../../stores/authStore';
-import { User, Mail, Shield, Phone, LogOut, ChevronRight } from 'lucide-react';
+import { User, Mail, Shield, Phone, LogOut, ChevronRight, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../../modules/auth/authApi';
+import { Modal, Form, Input, message } from 'antd';
 
 const CustomerProfile: React.FC = () => {
     const { user, logout } = useAuthStore();
     const navigate = useNavigate();
+    const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
+    const [form] = Form.useForm();
+    const [loading, setLoading] = useState(false);
 
     const handleLogout = async () => {
         try {
@@ -16,6 +20,23 @@ const CustomerProfile: React.FC = () => {
         } finally {
             logout();
             navigate('/login');
+        }
+    };
+
+    const handleChangePassword = async (values: any) => {
+        setLoading(true);
+        try {
+            await authApi.changePassword({
+                oldPassword: values.oldPassword,
+                newPassword: values.newPassword
+            });
+            message.success('Đổi mật khẩu thành công!');
+            setIsPasswordModalVisible(false);
+            form.resetFields();
+        } catch (error: any) {
+            message.error(error.response?.data?.message || 'Mật khẩu cũ không chính xác.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -63,7 +84,10 @@ const CustomerProfile: React.FC = () => {
                         <button className="text-blue-600 text-sm font-medium">Thêm</button>
                     </div>
 
-                    <div className="p-4 flex items-center gap-3 hover:bg-gray-50 cursor-pointer transition-colors">
+                    <div 
+                        onClick={() => setIsPasswordModalVisible(true)}
+                        className="p-4 flex items-center gap-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                    >
                         <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
                             <Shield size={20} />
                         </div>
@@ -102,6 +126,72 @@ const CustomerProfile: React.FC = () => {
                 
                 <p className="text-center text-xs text-gray-400">Phiên bản 1.0.0 (MVP)</p>
             </div>
+
+            {/* Change Password Modal */}
+            <Modal
+                title={
+                    <div className="flex items-center gap-2">
+                        <Lock size={20} className="text-blue-500" />
+                        <span>Đổi mật khẩu</span>
+                    </div>
+                }
+                open={isPasswordModalVisible}
+                onCancel={() => {
+                    setIsPasswordModalVisible(false);
+                    form.resetFields();
+                }}
+                onOk={() => form.submit()}
+                confirmLoading={loading}
+                okText="Cập nhật"
+                cancelText="Hủy"
+                centered
+                className="rounded-2xl overflow-hidden"
+            >
+                <Form
+                    form={form}
+                    layout="vertical"
+                    onFinish={handleChangePassword}
+                    className="mt-4"
+                >
+                    <Form.Item
+                        name="oldPassword"
+                        label="Mật khẩu hiện tại"
+                        rules={[{ required: true, message: 'Vui lòng nhập mật khẩu hiện tại' }]}
+                    >
+                        <Input.Password placeholder="********" className="rounded-lg py-2" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="newPassword"
+                        label="Mật khẩu mới"
+                        rules={[
+                            { required: true, message: 'Vui lòng nhập mật khẩu mới' },
+                            { min: 6, message: 'Mật khẩu phải từ 6 ký tự trở lên' }
+                        ]}
+                    >
+                        <Input.Password placeholder="********" className="rounded-lg py-2" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="confirmPassword"
+                        label="Xác nhận mật khẩu mới"
+                        dependencies={['newPassword']}
+                        rules={[
+                            { required: true, message: 'Vui lòng xác nhận mật khẩu mới' },
+                            ({ getFieldValue }) => ({
+                                validator(_, value) {
+                                    if (!value || getFieldValue('newPassword') === value) {
+                                        return Promise.resolve();
+                                    }
+                                    return Promise.reject(new Error('Mật khẩu xác nhận không khớp!'));
+                                },
+                            }),
+                        ]}
+                    >
+                        <Input.Password placeholder="********" className="rounded-lg py-2" />
+                    </Form.Item>
+                </Form>
+            </Modal>
         </div>
     );
 };
