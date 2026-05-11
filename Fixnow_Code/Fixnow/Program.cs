@@ -32,6 +32,7 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 try {
+  Log.Information("Application is starting up...");
   var builder = WebApplication.CreateBuilder(args);
 
   // Use Serilog
@@ -298,7 +299,9 @@ builder.Services.AddRateLimiter(options =>
 });
 
 // ─── Build ────────────────────────────────────────────────────────────────────
+Log.Information("Building the WebApplication...");
 var app = builder.Build();
+Log.Information("WebApplication built successfully.");
 
 // ─── Middleware Pipeline ──────────────────────────────────────────────────────
 app.UseMiddleware<ExceptionMiddleware>();
@@ -348,13 +351,20 @@ app.UseHangfireDashboard("/hangfire", new DashboardOptions
 });
 
 // Setup Recurring Jobs
-Log.Information("Registering Recurring Jobs...");
-RecurringJob.AddOrUpdate<ISystemJobService>(
-  "system-cleanup-job",
-  service => service.CleanupExpiredDataAsync(),
-  Cron.Daily);
+using (var scope = app.Services.CreateScope())
+{
+    Log.Information("Registering Recurring Jobs via Scoped Manager...");
+    var recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
+    recurringJobManager.AddOrUpdate<ISystemJobService>(
+        "system-cleanup-job",
+        service => service.CleanupExpiredDataAsync(),
+        Cron.Daily);
+}
 
-app.Run();
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+Log.Information("Starting application on port {Port}...", port);
+Log.Information("Calling app.Run()...");
+app.Run($"http://0.0.0.0:{port}");
 }
 catch (Exception ex)
 {
