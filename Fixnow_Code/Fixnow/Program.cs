@@ -39,21 +39,37 @@ try {
 
 // ─── Database ─────────────────────────────────────────────────────────────────
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-
-// Support for DATABASE_URL (Common on Render/Heroku)
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 if (!string.IsNullOrEmpty(databaseUrl))
 {
-    try 
-    {
-        var uri = new Uri(databaseUrl);
-        var userInfo = uri.UserInfo.Split(':');
-        connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=True;";
+    try {
+        if (databaseUrl.StartsWith("postgres://") || databaseUrl.StartsWith("postgresql://")) {
+            var uri = new Uri(databaseUrl);
+            var userInfo = uri.UserInfo.Split(':');
+            var builderConn = new Npgsql.NpgsqlConnectionStringBuilder {
+                Host = uri.Host,
+                Port = uri.Port > 0 ? uri.Port : 5432,
+                Database = uri.AbsolutePath.TrimStart('/'),
+                Username = userInfo[0],
+                Password = userInfo.Length > 1 ? userInfo[1] : "",
+                SslMode = SslMode.Require,
+                TrustServerCertificate = true
+            };
+            connectionString = builderConn.ToString();
+        } else {
+            connectionString = databaseUrl; // Assume it's already a valid Npgsql connection string
+        }
+    } catch (Exception ex) {
+        Log.Warning(ex, "Error parsing DATABASE_URL. Falling back to default.");
     }
-    catch (Exception ex)
-    {
-        Log.Warning(ex, "Failed to parse DATABASE_URL environment variable.");
-    }
+}
+
+// Log connection info (SAFE)
+try {
+    var cb = new Npgsql.NpgsqlConnectionStringBuilder(connectionString);
+    Log.Information("Database connection target: Host={Host}, Port={Port}, Database={Database}", cb.Host, cb.Port, cb.Database);
+} catch {
+    Log.Warning("Could not parse connection string for diagnostic logging.");
 }
 
 if (string.IsNullOrEmpty(connectionString))
@@ -332,6 +348,7 @@ app.UseHangfireDashboard("/hangfire", new DashboardOptions
 });
 
 // Setup Recurring Jobs
+Log.Information("Registering Recurring Jobs...");
 RecurringJob.AddOrUpdate<ISystemJobService>(
   "system-cleanup-job",
   service => service.CleanupExpiredDataAsync(),
