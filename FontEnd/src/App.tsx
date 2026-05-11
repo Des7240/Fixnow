@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { useAuthStore } from './stores/authStore';
 
 // Public Pages
 import Login from './pages/public/Login';
@@ -94,7 +95,20 @@ function App() {
         </Route>
 
         {/* Fallback */}
-        <Route path="/unauthorized" element={<div className="p-10 text-center text-red-500 text-2xl font-bold">Unauthorized Access</div>} />
+        <Route path="/unauthorized" element={
+          <div className="flex flex-col items-center justify-center min-h-[50vh] p-10 text-center">
+            <div className="text-red-500 text-2xl font-bold mb-4">Unauthorized Access</div>
+            <button 
+              onClick={() => {
+                useAuthStore.getState().logout();
+                window.location.href = '/login';
+              }}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium"
+            >
+              Đăng xuất & Trở về
+            </button>
+          </div>
+        } />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
