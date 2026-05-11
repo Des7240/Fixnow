@@ -336,6 +336,23 @@ app.UseMiddleware<SecurityHeadersMiddleware>();
 
 app.UseRateLimiter();
 
+// Automatically apply migrations on startup
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<AppDbContext>();
+        Log.Information("Applying pending migrations...");
+        context.Database.Migrate();
+        Log.Information("Database migrations applied successfully.");
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "An error occurred while migrating the database.");
+    }
+}
+
 // Request logging via Serilog
 app.UseSerilogRequestLogging(options =>
 {
