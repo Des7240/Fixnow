@@ -166,4 +166,85 @@ public class NotificationService : INotificationService
       Message = messagePreview
     });
   }
+
+  /// <inheritdoc/>
+  public Task NotifyWorkerNewOpenJobAsync(Guid workerId, Guid jobId, string title)
+  {
+    _backgroundJobClient.Enqueue(() => DoNotifyWorkerNewOpenJobAsync(workerId, jobId, title));
+    return Task.CompletedTask;
+  }
+
+  [AutomaticRetry(Attempts = 3)]
+  public async Task DoNotifyWorkerNewOpenJobAsync(Guid workerId, Guid jobId, string title)
+  {
+    await _notificationRepo.AddAsync(new Notification
+    {
+      UserId = workerId,
+      Title = "Công việc mới gần bạn!",
+      Content = $"Có khách hàng đang tìm thợ cho: {title}. Nhấn để xem và gửi báo giá.",
+      Type = "NEW_OPEN_JOB",
+      ReferenceId = jobId
+    });
+
+    await _hubContext.Clients.User(workerId.ToString()).SendAsync("ReceiveNotification", new
+    {
+      Type = "NEW_OPEN_JOB",
+      ReferenceId = jobId,
+      Message = $"Công việc mới: {title}"
+    });
+  }
+
+  /// <inheritdoc/>
+  public Task NotifyCustomerNewOfferAsync(Guid customerId, Guid jobId, string workerName)
+  {
+    _backgroundJobClient.Enqueue(() => DoNotifyCustomerNewOfferAsync(customerId, jobId, workerName));
+    return Task.CompletedTask;
+  }
+
+  [AutomaticRetry(Attempts = 3)]
+  public async Task DoNotifyCustomerNewOfferAsync(Guid customerId, Guid jobId, string workerName)
+  {
+    await _notificationRepo.AddAsync(new Notification
+    {
+      UserId = customerId,
+      Title = "Có báo giá mới!",
+      Content = $"Thợ {workerName} đã gửi báo giá cho công việc của bạn. Hãy vào xem và so sánh nhé.",
+      Type = "NEW_WORKER_OFFER",
+      ReferenceId = jobId
+    });
+
+    await _hubContext.Clients.User(customerId.ToString()).SendAsync("ReceiveNotification", new
+    {
+      Type = "NEW_WORKER_OFFER",
+      ReferenceId = jobId,
+      Message = $"Thợ {workerName} đã gửi báo giá."
+    });
+  }
+
+  /// <inheritdoc/>
+  public Task NotifyWorkerOfferAcceptedAsync(Guid workerId, Guid bookingId)
+  {
+    _backgroundJobClient.Enqueue(() => DoNotifyWorkerOfferAcceptedAsync(workerId, bookingId));
+    return Task.CompletedTask;
+  }
+
+  [AutomaticRetry(Attempts = 3)]
+  public async Task DoNotifyWorkerOfferAcceptedAsync(Guid workerId, Guid bookingId)
+  {
+    await _notificationRepo.AddAsync(new Notification
+    {
+      UserId = workerId,
+      Title = "Báo giá được chấp nhận!",
+      Content = "Khách hàng đã chọn báo giá của bạn. Đơn hàng đã được tạo.",
+      Type = "OFFER_ACCEPTED",
+      ReferenceId = bookingId
+    });
+
+    await _hubContext.Clients.User(workerId.ToString()).SendAsync("ReceiveNotification", new
+    {
+      Type = "OFFER_ACCEPTED",
+      ReferenceId = bookingId,
+      Message = "Khách hàng đã chấp nhận báo giá của bạn."
+    });
+  }
 }

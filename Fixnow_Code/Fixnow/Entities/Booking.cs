@@ -28,10 +28,13 @@ public class Booking
   public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
   public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+  public Guid? OpenJobId { get; set; }
+
   // Navigation
   public User Customer { get; set; } = null!;
   public User? Worker { get; set; }
   public ServiceCategory Service { get; set; } = null!;
+  public OpenJob? OpenJob { get; set; }
   public ICollection<BookingStatusHistory> StatusHistories { get; set; } = new List<BookingStatusHistory>();
   public ICollection<BookingMatchingLog> MatchingLogs { get; set; } = new List<BookingMatchingLog>();
   public BookingFinancial? Financial { get; set; }

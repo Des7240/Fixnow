@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Fixnow.DTOs.Worker;
 using Fixnow.Enums;
 using Fixnow.Repositories.Interfaces;
+using Fixnow.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,10 +17,23 @@ namespace Fixnow.Controllers;
 public class WorkerController : ControllerBase
 {
   private readonly IWorkerLocationRepository _locationRepo;
+  private readonly IWorkerProfileService _profileService;
 
-  public WorkerController(IWorkerLocationRepository locationRepo)
+  public WorkerController(IWorkerLocationRepository locationRepo, IWorkerProfileService profileService)
   {
     _locationRepo = locationRepo;
+    _profileService = profileService;
+  }
+
+  /// <summary>
+  /// Get public profile of a worker.
+  /// </summary>
+  [HttpGet("{id:guid}/profile")]
+  [ProducesResponseType(typeof(Fixnow.DTOs.WorkerProfile.WorkerProfileDto), StatusCodes.Status200OK)]
+  public async Task<IActionResult> GetWorkerProfile([FromRoute] Guid id)
+  {
+    var profile = await _profileService.GetProfileAsync(id);
+    return Ok(profile);
   }
 
   /// <summary>

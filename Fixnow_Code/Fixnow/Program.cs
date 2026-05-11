@@ -202,7 +202,11 @@ builder.Services.AddScoped<IBookingJobService, BookingJobService>();
 builder.Services.AddScoped<ISystemJobService, SystemJobService>();
 
 builder.Services.AddScoped<IQuotationRepository, QuotationRepository>();
+builder.Services.AddScoped<IOpenJobRepository, OpenJobRepository>();
+builder.Services.AddScoped<IOfferRepository, OfferRepository>();
+
 builder.Services.AddScoped<IQuotationService, QuotationService>();
+builder.Services.AddScoped<IOpenJobService, OpenJobService>();
 
 builder.Services.AddScoped<IWalletRepository, WalletRepository>();
 builder.Services.AddScoped<IWalletTransactionRepository, WalletTransactionRepository>();

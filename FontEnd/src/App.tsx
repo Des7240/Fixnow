@@ -10,12 +10,16 @@ import Register from './pages/public/Register';
 import CustomerLayout from './layouts/CustomerLayout';
 import CustomerHome from './pages/customer/Home';
 import CreateBooking from './pages/customer/CreateBooking';
+import CreateOpenJob from './pages/customer/CreateOpenJob';
+import ViewOffers from './pages/customer/ViewOffers';
 import BookingsList from './pages/customer/BookingsList';
 import CustomerProfile from './pages/customer/CustomerProfile';
 
 // Worker Pages
 import WorkerLayout from './layouts/WorkerLayout';
 import WorkerDashboard from './pages/worker/Dashboard';
+import NearbyJobs from './pages/worker/NearbyJobs';
+import OpenJobDetails from './pages/worker/OpenJobDetails';
 import WorkerKYC from './pages/worker/WorkerKYC';
 import WorkerProfile from './pages/worker/WorkerProfile';
 import WorkerBookingsList from './pages/worker/WorkerBookingsList';
@@ -27,6 +31,7 @@ import NotificationsList from './pages/shared/NotificationsList';
 import BookingDetail from './pages/shared/BookingDetail';
 import PaymentReturn from './pages/shared/PaymentReturn';
 import ChatRoom from './pages/shared/ChatRoom';
+import PublicWorkerProfile from './pages/shared/PublicWorkerProfile';
 import CreateDispute from './pages/shared/CreateDispute';
 
 import AdminLayout from './layouts/AdminLayout';
@@ -50,6 +55,7 @@ function App() {
         <Route element={<ProtectedRoute allowedRoles={['CUSTOMER', 'WORKER']} />}>
           <Route path="/payment/result" element={<PaymentReturn />} />
           <Route path="/bookings/:id/chat" element={<ChatRoom />} />
+          <Route path="/worker-profile/:id" element={<PublicWorkerProfile />} />
         </Route>
 
         {/* Customer Routes */}
@@ -63,6 +69,8 @@ function App() {
           </Route>
           {/* Create Booking is full screen, outside bottom nav layout */}
           <Route path="/customer/booking/create" element={<CreateBooking />} />
+          <Route path="/customer/open-job/create" element={<CreateOpenJob />} />
+          <Route path="/customer/open-jobs/:id/offers" element={<ViewOffers />} />
           <Route path="/customer/bookings/:id/dispute" element={<CreateDispute />} />
         </Route>
 
@@ -70,6 +78,7 @@ function App() {
         <Route element={<ProtectedRoute allowedRoles={['WORKER']} />}>
           <Route element={<WorkerLayout />}>
             <Route path="/worker" element={<WorkerDashboard />} />
+            <Route path="/worker/open-jobs/nearby" element={<NearbyJobs />} />
             <Route path="/worker/bookings" element={<WorkerBookingsList />} />
             <Route path="/worker/bookings/:id" element={<BookingDetail />} />
             <Route path="/worker/notifications" element={<NotificationsList />} />
@@ -77,6 +86,7 @@ function App() {
             <Route path="/worker/profile" element={<WorkerProfile />} />
           </Route>
           {/* Full screen pages */}
+          <Route path="/worker/open-jobs/:id" element={<OpenJobDetails />} />
           <Route path="/worker/bookings/:id/quotation/create" element={<CreateQuotation />} />
           <Route path="/worker/wallet" element={<WalletDashboard />} />
         </Route>

@@ -72,6 +72,16 @@ export default function NotificationsList() {
         return;
       }
 
+      if (notification.type === 'NEW_OPEN_JOB') {
+        navigate(`/worker/open-jobs/${notification.referenceId}`);
+        return;
+      }
+
+      if (notification.type === 'NEW_WORKER_OFFER') {
+        navigate(`/customer/open-jobs/${notification.referenceId}/offers`);
+        return;
+      }
+
       const rolePrefix = user?.role?.toUpperCase() === 'WORKER' ? '/worker' : '/customer';
       navigate(`${rolePrefix}/bookings/${notification.referenceId}`);
     }

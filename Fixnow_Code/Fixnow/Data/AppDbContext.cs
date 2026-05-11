@@ -60,6 +60,12 @@ public class AppDbContext : DbContext
   public DbSet<DisputeEvidence> DisputeEvidences => Set<DisputeEvidence>();
   public DbSet<Refund> Refunds => Set<Refund>();
 
+  // P5 Open Job & Bidding DbSets
+  public DbSet<OpenJob> OpenJobs => Set<OpenJob>();
+  public DbSet<OpenJobAttachment> OpenJobAttachments => Set<OpenJobAttachment>();
+  public DbSet<WorkerOffer> WorkerOffers => Set<WorkerOffer>();
+  public DbSet<OfferAttachment> OfferAttachments => Set<OfferAttachment>();
+
   protected override void OnModelCreating(ModelBuilder modelBuilder)
   {
     base.OnModelCreating(modelBuilder);
@@ -132,6 +138,78 @@ public class AppDbContext : DbContext
       entity.HasOne(b => b.Service)
         .WithMany(s => s.Bookings)
         .HasForeignKey(b => b.ServiceId)
+        .OnDelete(DeleteBehavior.Restrict);
+
+      entity.HasOne(b => b.OpenJob)
+        .WithMany()
+        .HasForeignKey(b => b.OpenJobId)
+        .OnDelete(DeleteBehavior.SetNull);
+    });
+
+    // ── OpenJob ───────────────────────────────────────────────────────────────
+    modelBuilder.Entity<OpenJob>(entity =>
+    {
+      entity.ToTable("open_jobs");
+      entity.HasKey(oj => oj.Id);
+      entity.Property(oj => oj.Status).HasConversion<string>().HasMaxLength(50);
+      entity.Property(oj => oj.Location).HasColumnType("geography(Point, 4326)");
+
+      entity.HasOne(oj => oj.Customer)
+        .WithMany()
+        .HasForeignKey(oj => oj.CustomerId)
+        .OnDelete(DeleteBehavior.Restrict);
+
+      entity.HasOne(oj => oj.Service)
+        .WithMany()
+        .HasForeignKey(oj => oj.ServiceId)
+        .OnDelete(DeleteBehavior.Restrict);
+    });
+
+    // ── OpenJobAttachment ──────────────────────────────────────────────────────
+    modelBuilder.Entity<OpenJobAttachment>(entity =>
+    {
+      entity.ToTable("open_job_attachments");
+      entity.HasKey(oja => oja.Id);
+      entity.HasOne(oja => oja.OpenJob)
+        .WithMany(oj => oj.Attachments)
+        .HasForeignKey(oja => oja.OpenJobId)
+        .OnDelete(DeleteBehavior.Cascade);
+      entity.HasOne(oja => oja.File)
+        .WithMany()
+        .HasForeignKey(oja => oja.FileId)
+        .OnDelete(DeleteBehavior.Restrict);
+    });
+
+    // ── WorkerOffer ────────────────────────────────────────────────────────────
+    modelBuilder.Entity<WorkerOffer>(entity =>
+    {
+      entity.ToTable("worker_offers");
+      entity.HasKey(wo => wo.Id);
+      entity.Property(wo => wo.Status).HasConversion<string>().HasMaxLength(50);
+
+      entity.HasOne(wo => wo.OpenJob)
+        .WithMany(oj => oj.Offers)
+        .HasForeignKey(wo => wo.OpenJobId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+      entity.HasOne(wo => wo.Worker)
+        .WithMany()
+        .HasForeignKey(wo => wo.WorkerId)
+        .OnDelete(DeleteBehavior.Restrict);
+    });
+
+    // ── OfferAttachment ────────────────────────────────────────────────────────
+    modelBuilder.Entity<OfferAttachment>(entity =>
+    {
+      entity.ToTable("offer_attachments");
+      entity.HasKey(oa => oa.Id);
+      entity.HasOne(oa => oa.Offer)
+        .WithMany(wo => wo.Attachments)
+        .HasForeignKey(oa => oa.OfferId)
+        .OnDelete(DeleteBehavior.Cascade);
+      entity.HasOne(oa => oa.File)
+        .WithMany()
+        .HasForeignKey(oa => oa.FileId)
         .OnDelete(DeleteBehavior.Restrict);
     });
 

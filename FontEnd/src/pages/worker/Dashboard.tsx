@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { Switch, message } from 'antd';
-import { Power, MapPin, Briefcase } from 'lucide-react';
+import { Power, MapPin, Briefcase, Search } from 'lucide-react';
 import axiosInstance from '../../utils/axiosInstance';
 import { clsx } from 'clsx';
 import { useSignalR } from '../../signalr/SignalRContext';
@@ -198,9 +198,17 @@ export default function WorkerDashboard() {
               <Power className="w-10 h-10 text-orange-500 animate-pulse" />
             </div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">Đang tìm đơn phù hợp...</h2>
-            <p className="text-gray-500 text-sm max-w-xs">
+            <p className="text-gray-500 text-sm max-w-xs mb-8">
               Giữ ứng dụng luôn mở. Khi có đơn mới, hệ thống sẽ báo ngay cho bạn.
             </p>
+
+            <button 
+              onClick={() => navigate('/worker/open-jobs/nearby')}
+              className="w-full max-w-xs py-4 bg-white border-2 border-orange-200 text-orange-600 font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-orange-50 transition-all"
+            >
+              <Search className="w-5 h-5" />
+              Xem việc công khai gần đây
+            </button>
             
             {/* New Job Modal Overlay */}
             {newJob && (

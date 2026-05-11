@@ -104,14 +104,23 @@ export default function CustomerHome() {
           ))}
         </div>
 
-        <button 
-          onClick={() => navigate('/customer/booking/create')}
-          className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl shadow-lg shadow-orange-500/30 flex items-center justify-center gap-2 disabled:opacity-50"
-          disabled={!selectedService}
-        >
-          <Wrench className="w-5 h-5" />
-          Tiếp tục đặt thợ
-        </button>
+        <div className="flex gap-3 mb-6">
+          <button 
+            onClick={() => navigate('/customer/booking/create')}
+            className="flex-1 py-4 bg-gray-900 hover:bg-black text-white font-bold rounded-2xl shadow-lg shadow-gray-900/30 flex items-center justify-center gap-2 disabled:opacity-50"
+            disabled={!selectedService}
+          >
+            <Wrench className="w-5 h-5" />
+            Đặt thợ ngay
+          </button>
+          <button 
+            onClick={() => navigate('/customer/open-job/create')}
+            className="flex-1 py-4 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl shadow-lg shadow-orange-500/30 flex items-center justify-center gap-2"
+          >
+            <Search className="w-5 h-5" />
+            Đăng tin tìm thợ
+          </button>
+        </div>
       </div>
     </div>
   );
