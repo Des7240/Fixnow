@@ -26,13 +26,9 @@ Log.Logger = new LoggerConfiguration()
   .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
   .Enrich.FromLogContext()
   .WriteTo.Console()
-  .WriteTo.Seq("http://localhost:5341")
-  .CreateLogger();
-
-try
-{
-  Log.Information("Starting web host");
-  var builder = WebApplication.CreateBuilder(args);
+    .WriteTo.Conditional(
+        evt => Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") != "Production",
+        wt => wt.Seq("http://localhost:5341"))
 
   // Use Serilog
   builder.Host.UseSerilog();
