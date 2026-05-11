@@ -1,8 +1,10 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
 
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7154/api/v1';
+
 const axiosInstance = axios.create({
-  baseURL: 'https://localhost:7154/api/v1', // Update port if your backend runs on a different port
+  baseURL: BASE_URL,
   timeout: 10000,
 });
 
@@ -27,7 +29,7 @@ axiosInstance.interceptors.response.use(
       try {
         // Attempt to refresh token
         const response = await axios.post(
-          'https://localhost:7154/api/v1/auth/refresh',
+          `${BASE_URL}/auth/refresh`,
           {},
           { withCredentials: true } // Send httpOnly cookie
         );
