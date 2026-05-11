@@ -47,15 +47,23 @@ if (!string.IsNullOrEmpty(databaseUrl))
         if (databaseUrl.StartsWith("postgres://") || databaseUrl.StartsWith("postgresql://")) {
             var uri = new Uri(databaseUrl);
             var userInfo = uri.UserInfo.Split(':');
+            bool isInternal = !uri.Host.Contains("."); // Simple check for internal host
             var builderConn = new Npgsql.NpgsqlConnectionStringBuilder {
                 Host = uri.Host,
                 Port = uri.Port > 0 ? uri.Port : 5432,
                 Database = uri.AbsolutePath.TrimStart('/'),
                 Username = userInfo[0],
                 Password = userInfo.Length > 1 ? userInfo[1] : "",
-                SslMode = SslMode.Require,
-                TrustServerCertificate = true
+                SslMode = isInternal ? SslMode.Disable : SslMode.Require,
+                Timeout = 15,
+                CommandTimeout = 30
             };
+
+            if (!isInternal) {
+                // Use indexer to avoid obsolete warning in Npgsql 8.0 while maintaining compatibility
+                builderConn["Trust Server Certificate"] = true;
+            }
+
             connectionString = builderConn.ToString();
         } else {
             connectionString = databaseUrl; // Assume it's already a valid Npgsql connection string
@@ -81,6 +89,18 @@ if (string.IsNullOrEmpty(connectionString))
 var dataSourceBuilder = new Npgsql.NpgsqlDataSourceBuilder(connectionString);
 dataSourceBuilder.UseNetTopologySuite();
 var dataSource = dataSourceBuilder.Build();
+
+// Test database connection before building the app
+try {
+    Log.Information("Testing database connection (with 5s timeout)...");
+    using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
+    using var connection = await dataSource.OpenConnectionAsync(cts.Token);
+    Log.Information("Database connection test successful.");
+} catch (OperationCanceledException) {
+    Log.Error("Database connection test timed out after 5 seconds.");
+} catch (Exception ex) {
+    Log.Error(ex, "Database connection test failed. This might cause a hang later.");
+}
 
 builder.Services.AddDbContext<AppDbContext>(options =>
   options.UseNpgsql(dataSource, o => o.UseNetTopologySuite())
@@ -196,6 +216,7 @@ builder.Services.AddScoped<IDisputeService, DisputeService>();
 builder.Services.AddSignalR();
 
 // ─── Hangfire ─────────────────────────────────────────────────────────────────
+Log.Information("Configuring Hangfire Services...");
 builder.Services.AddHangfire(config => config
   .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
   .UseSimpleAssemblyNameTypeSerializer()
@@ -203,6 +224,7 @@ builder.Services.AddHangfire(config => config
   .UsePostgreSqlStorage(c => c.UseNpgsqlConnection(connectionString)));
 
 builder.Services.AddHangfireServer();
+Log.Information("Hangfire Services configured.");
 
 // ─── Controllers + Swagger ────────────────────────────────────────────────────
 builder.Services.AddControllers()
@@ -334,7 +356,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors();
-app.UseHttpsRedirection();
+
+if (!app.Environment.IsProduction())
+{
+    app.UseHttpsRedirection();
+}
 
 // Serve static files from wwwroot (for KYC image uploads)
 app.UseStaticFiles();
@@ -350,16 +376,24 @@ app.UseHangfireDashboard("/hangfire", new DashboardOptions
   Authorization = new[] { new Fixnow.Filters.HangfireAuthorizationFilter() }
 });
 
-// Setup Recurring Jobs
-using (var scope = app.Services.CreateScope())
+// Setup Recurring Jobs in Background
+app.Lifetime.ApplicationStarted.Register(() =>
 {
-    Log.Information("Registering Recurring Jobs via Scoped Manager...");
-    var recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
-    recurringJobManager.AddOrUpdate<ISystemJobService>(
-        "system-cleanup-job",
-        service => service.CleanupExpiredDataAsync(),
-        Cron.Daily);
-}
+    try {
+        using (var scope = app.Services.CreateScope())
+        {
+            Log.Information("Registering Recurring Jobs in background...");
+            var recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
+            recurringJobManager.AddOrUpdate<ISystemJobService>(
+                "system-cleanup-job",
+                service => service.CleanupExpiredDataAsync(),
+                Cron.Daily);
+            Log.Information("Recurring Jobs registered successfully.");
+        }
+    } catch (Exception ex) {
+        Log.Error(ex, "Failed to register recurring jobs.");
+    }
+});
 
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 Log.Information("Starting application on port {Port}...", port);
