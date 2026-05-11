@@ -106,16 +106,26 @@ export default function OpenJobDetails() {
             <h2 className="text-xl font-bold text-gray-900 mb-4">{job.title}</h2>
             
             <div className="flex flex-wrap gap-2 mb-4">
-                {job.minBudget && (
+                {(job.minBudget || job.maxBudget) ? (
                     <div className="flex items-center gap-1.5 bg-green-50 text-green-700 px-3 py-1.5 rounded-xl border border-green-100">
                         <DollarSign className="w-4 h-4" />
                         <span className="text-sm font-bold">
-                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(job.minBudget)} - {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(job.maxBudget || 0)}
+                            {job.minBudget ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(job.minBudget) : ''}
+                            {job.minBudget && job.maxBudget ? ' - ' : ''}
+                            {job.maxBudget ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(job.maxBudget) : (job.minBudget ? '' : 'Thỏa thuận')}
+                            {!job.maxBudget && job.minBudget ? ' (Min)' : ''}
                         </span>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-1.5 bg-gray-50 text-gray-600 px-3 py-1.5 rounded-xl border border-gray-100">
+                        <DollarSign className="w-4 h-4" />
+                        <span className="text-sm font-bold">Thỏa thuận</span>
                     </div>
                 )}
                 {job.urgencyLevel && job.urgencyLevel !== 'NORMAL' && (
-                    <div className="flex items-center gap-1.5 bg-red-50 text-red-700 px-3 py-1.5 rounded-xl border border-red-100">
+                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border ${
+                        job.urgencyLevel === 'CRITICAL' ? 'bg-red-50 text-red-700 border-red-100' : 'bg-orange-50 text-orange-700 border-orange-100'
+                    }`}>
                         <AlertCircle className="w-4 h-4" />
                         <span className="text-sm font-bold uppercase">Ưu tiên: {job.urgencyLevel === 'URGENT' ? 'Gấp' : 'Rất gấp'}</span>
                     </div>

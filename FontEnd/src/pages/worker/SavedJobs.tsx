@@ -49,8 +49,18 @@ export default function SavedJobs() {
   };
 
   const formatCurrency = (val?: number) => {
-    if (!val) return 'Thỏa thuận';
+    if (val === undefined || val === null || val === 0) return null;
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
+  };
+
+  const getBudgetDisplay = (min?: number, max?: number) => {
+    const minFmt = formatCurrency(min);
+    const maxFmt = formatCurrency(max);
+
+    if (minFmt && maxFmt) return `${minFmt} - ${maxFmt}`;
+    if (minFmt) return `Từ ${minFmt}`;
+    if (maxFmt) return `Đến ${maxFmt}`;
+    return 'Thỏa thuận';
   };
 
   return (
@@ -110,7 +120,7 @@ export default function SavedJobs() {
                             <div className="flex items-center gap-1 bg-green-50 text-green-700 px-3 py-1.5 rounded-xl border border-green-100">
                                 <DollarSign className="w-4 h-4" />
                                 <span className="text-sm font-bold">
-                                    {job.minBudget ? `${formatCurrency(job.minBudget)} - ${formatCurrency(job.maxBudget)}` : 'Thỏa thuận'}
+                                    {getBudgetDisplay(job.minBudget, job.maxBudget)}
                                 </span>
                             </div>
                         </div>

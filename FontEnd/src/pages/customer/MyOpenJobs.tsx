@@ -29,6 +29,17 @@ const getStatusLabel = (status: string) => {
   }
 };
 
+const getBudgetDisplay = (min?: number, max?: number) => {
+  if (!min && !max) return 'Thỏa thuận';
+  
+  const format = (val: number) => val.toLocaleString() + 'đ';
+
+  if (min && max) return `${format(min)} - ${format(max)}`;
+  if (min) return `Từ ${format(min)}`;
+  if (max) return `Đến ${format(max)}`;
+  return 'Thỏa thuận';
+};
+
 export default function MyOpenJobs() {
   const navigate = useNavigate();
   const { myJobs, loading, fetchMyJobs } = useOpenJobStore();
@@ -47,7 +58,7 @@ export default function MyOpenJobs() {
           <h1 className="text-lg font-bold text-gray-900">Việc đã đăng</h1>
         </div>
         <button 
-          onClick={() => navigate('/customer/create-open-job')}
+          onClick={() => navigate('/customer/open-job/create')}
           className="p-2 bg-orange-500 rounded-xl text-white shadow-lg shadow-orange-500/20"
         >
           <Plus className="w-5 h-5" />
@@ -67,7 +78,7 @@ export default function MyOpenJobs() {
             <Button 
                 type="primary" 
                 size="large" 
-                onClick={() => navigate('/customer/create-open-job')}
+                onClick={() => navigate('/customer/open-job/create')}
                 className="mt-4 bg-orange-500 border-none rounded-xl h-12 px-8 font-bold"
             >
                 Đăng tin ngay
@@ -104,7 +115,7 @@ export default function MyOpenJobs() {
                   <div className="flex flex-col">
                     <span className="text-[10px] text-gray-400 font-bold uppercase">Ngân sách</span>
                     <span className="text-sm font-bold text-gray-700">
-                      {job.minBudget ? `${job.minBudget.toLocaleString()}đ` : 'Thỏa thuận'}
+                      {getBudgetDisplay(job.minBudget, job.maxBudget)}
                     </span>
                   </div>
                 </div>

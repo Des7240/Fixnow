@@ -76,8 +76,41 @@ export default function NearbyJobs() {
   };
 
   const formatCurrency = (val?: number) => {
-    if (!val) return 'Thỏa thuận';
+    if (val === undefined || val === null || val === 0) return null;
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
+  };
+
+  const getBudgetDisplay = (min?: number, max?: number) => {
+    const minFmt = formatCurrency(min);
+    const maxFmt = formatCurrency(max);
+
+    if (minFmt && maxFmt) return `${minFmt} - ${maxFmt}`;
+    if (minFmt) return `Từ ${minFmt}`;
+    if (maxFmt) return `Đến ${maxFmt}`;
+    return 'Thỏa thuận';
+  };
+
+  const getUrgencyTag = (level?: string) => {
+    switch (level) {
+      case 'URGENT':
+        return (
+          <div className="absolute top-0 right-0">
+            <div className="bg-orange-500 text-white text-[8px] font-black px-4 py-1 rotate-45 translate-x-3 -translate-y-1 shadow-sm uppercase">
+              Gấp
+            </div>
+          </div>
+        );
+      case 'CRITICAL':
+        return (
+          <div className="absolute top-0 right-0">
+            <div className="bg-red-600 text-white text-[8px] font-black px-4 py-1 rotate-45 translate-x-3 -translate-y-1 shadow-sm uppercase">
+              Rất Gấp
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
@@ -177,13 +210,7 @@ export default function NearbyJobs() {
                         className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 hover:border-orange-200 transition-all cursor-pointer group relative overflow-hidden"
                     >
                         {/* Urgency Badge */}
-                        {job.urgencyLevel === 'URGENT' && (
-                            <div className="absolute top-0 right-0">
-                                <div className="bg-red-500 text-white text-[8px] font-black px-4 py-1 rotate-45 translate-x-3 -translate-y-1 shadow-sm uppercase">
-                                    Gấp
-                                </div>
-                            </div>
-                        )}
+                        {getUrgencyTag(job.urgencyLevel)}
 
                         <div className="flex justify-between items-start mb-3">
                             <div className="flex items-center gap-2">
@@ -212,9 +239,17 @@ export default function NearbyJobs() {
                             <div className="flex items-center gap-1 bg-green-50 text-green-700 px-3 py-1.5 rounded-xl border border-green-100">
                                 <DollarSign className="w-4 h-4" />
                                 <span className="text-sm font-bold">
-                                    {job.minBudget ? `${formatCurrency(job.minBudget)} - ${formatCurrency(job.maxBudget)}` : 'Thỏa thuận'}
+                                    {getBudgetDisplay(job.minBudget, job.maxBudget)}
                                 </span>
                             </div>
+                            {job.urgencyLevel && job.urgencyLevel !== 'NORMAL' && (
+                                <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${
+                                    job.urgencyLevel === 'CRITICAL' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'
+                                }`}>
+                                    <AlertCircle className="w-3 h-3" />
+                                    {job.urgencyLevel === 'CRITICAL' ? 'Ưu tiên cao' : 'Cần gấp'}
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex items-center justify-between pt-4 border-t border-gray-50">
