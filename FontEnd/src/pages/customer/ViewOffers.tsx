@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Star, Clock, DollarSign, CheckCircle, Loader2, Wrench, User, ChevronRight } from 'lucide-react';
-import { message, Modal } from 'antd';
+import { ArrowLeft, Star, Clock, DollarSign, CheckCircle, Loader2, Wrench, User, ChevronRight, Shield } from 'lucide-react';
+import { message, Modal, Badge } from 'antd';
 import axiosInstance from '../../utils/axiosInstance';
+import { API_BASE_URL } from '../../utils/constants';
 
 interface Offer {
   id: string;
@@ -12,8 +13,11 @@ interface Offer {
   estimatedPrice: number;
   analysis: string;
   estimatedArrivalMinutes: number;
+  estimatedRepairTimeMinutes: number;
+  warrantyDays?: number;
   workerRating: number;
   workerCompletedJobs: number;
+  workerScore: number;
 }
 
 interface OpenJob {
@@ -70,6 +74,25 @@ export default function ViewOffers() {
     });
   };
 
+  const handleRejectOffer = (offer: Offer) => {
+    Modal.confirm({
+        title: 'Từ chối báo giá',
+        content: `Bạn có chắc chắn muốn từ chối báo giá của ${offer.workerName}?`,
+        okText: 'Từ chối',
+        okType: 'danger',
+        cancelText: 'Hủy',
+        onOk: async () => {
+            try {
+                await axiosInstance.post(`/open-jobs/offers/${offer.id}/reject`);
+                message.success('Đã từ chối báo giá');
+                fetchData();
+            } catch (err) {
+                message.error('Lỗi khi từ chối báo giá');
+            }
+        }
+    });
+  };
+
   if (loading) return (
     <div className="h-screen flex items-center justify-center">
         <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
@@ -108,13 +131,16 @@ export default function ViewOffers() {
                                 <div className="flex items-center gap-3">
                                     <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center overflow-hidden">
                                         {offer.workerAvatar ? (
-                                            <img src={offer.workerAvatar} alt="avatar" className="w-full h-full object-cover" />
+                                            <img src={`${API_BASE_URL}${offer.workerAvatar}`} alt="avatar" className="w-full h-full object-cover" />
                                         ) : (
                                             <User className="w-6 h-6 text-orange-600" />
                                         )}
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-gray-900">{offer.workerName}</h4>
+                                        <div className="flex items-center gap-2">
+                                            <h4 className="font-bold text-gray-900">{offer.workerName}</h4>
+                                            <Badge count={`${offer.workerScore.toFixed(0)}đ`} style={{ backgroundColor: '#f59e0b', fontSize: '10px' }} />
+                                        </div>
                                         <div className="flex items-center gap-2">
                                             <div className="flex items-center text-orange-500">
                                                 <Star className="w-3 h-3 fill-current" />
@@ -142,7 +168,7 @@ export default function ViewOffers() {
                                 </p>
                             </div>
 
-                            <div className="flex items-center gap-6 mb-5 ml-1">
+                            <div className="flex items-center gap-6 mb-5 ml-1 flex-wrap">
                                 <div className="flex items-center gap-2">
                                     <Clock className="w-4 h-4 text-gray-400" />
                                     <div>
@@ -151,20 +177,30 @@ export default function ViewOffers() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <CheckCircle className="w-4 h-4 text-green-500" />
+                                    <Wrench className="w-4 h-4 text-gray-400" />
                                     <div>
-                                        <p className="text-[10px] text-gray-400 font-bold uppercase">Trạng thái</p>
-                                        <p className="text-xs font-bold text-green-600">Thợ sẵn sàng</p>
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase">Sửa trong</p>
+                                        <p className="text-xs font-bold text-gray-900">{offer.estimatedRepairTimeMinutes} phút</p>
                                     </div>
                                 </div>
+                                {offer.warrantyDays && (
+                                    <div className="flex items-center gap-2">
+                                        <Shield className="w-4 h-4 text-blue-500" />
+                                        <div>
+                                            <p className="text-[10px] text-gray-400 font-bold uppercase">Bảo hành</p>
+                                            <p className="text-xs font-bold text-blue-600">{offer.warrantyDays} ngày</p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="flex gap-3">
                                 <button 
-                                    onClick={() => navigate(`/worker-profile/${offer.workerId}`)}
-                                    className="flex-1 py-3 bg-gray-100 text-gray-700 text-sm font-bold rounded-xl hover:bg-gray-200 transition-colors"
+                                    onClick={() => handleRejectOffer(offer)}
+                                    disabled={selecting === offer.id}
+                                    className="flex-1 py-3 bg-red-50 text-red-600 text-sm font-bold rounded-xl hover:bg-red-100 transition-colors"
                                 >
-                                    Xem hồ sơ
+                                    Từ chối
                                 </button>
                                 <button 
                                     onClick={() => handleSelectWorker(offer)}

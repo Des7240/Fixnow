@@ -46,6 +46,53 @@ public class OpenJobController : ControllerBase
     return Ok(result);
   }
 
+  [HttpGet("marketplace")]
+  [Authorize(Roles = "WORKER")]
+  public async Task<ActionResult<IEnumerable<OpenJobResponse>>> GetMarketplaceJobs(
+    [FromQuery] double lat, 
+    [FromQuery] double lng, 
+    [FromQuery] double radius = 10,
+    [FromQuery] string? serviceTypes = null,
+    [FromQuery] decimal? minBudget = null,
+    [FromQuery] decimal? maxBudget = null,
+    [FromQuery] string? urgencyLevel = null,
+    [FromQuery] string? sort = "latest")
+  {
+    var workerId = GetCurrentUserId();
+    var serviceIdsList = serviceTypes?.Split(',').Select(Guid.Parse).ToList();
+    
+    var result = await _openJobService.GetMarketplaceJobsAsync(
+      workerId, lat, lng, radius, serviceIdsList, minBudget, maxBudget, urgencyLevel, sort);
+    return Ok(result);
+  }
+
+  [HttpGet("saved")]
+  [Authorize(Roles = "WORKER")]
+  public async Task<ActionResult<IEnumerable<OpenJobResponse>>> GetSavedJobs()
+  {
+    var workerId = GetCurrentUserId();
+    var result = await _openJobService.GetSavedJobsAsync(workerId);
+    return Ok(result);
+  }
+
+  [HttpPost("{id}/save")]
+  [Authorize(Roles = "WORKER")]
+  public async Task<IActionResult> SaveJob(Guid id)
+  {
+    var workerId = GetCurrentUserId();
+    await _openJobService.SaveJobAsync(workerId, id);
+    return NoContent();
+  }
+
+  [HttpDelete("{id}/save")]
+  [Authorize(Roles = "WORKER")]
+  public async Task<IActionResult> UnsaveJob(Guid id)
+  {
+    var workerId = GetCurrentUserId();
+    await _openJobService.UnsaveJobAsync(workerId, id);
+    return NoContent();
+  }
+
   [HttpGet("{id}")]
   public async Task<ActionResult<OpenJobResponse>> GetJobDetails(Guid id)
   {
@@ -75,6 +122,33 @@ public class OpenJobController : ControllerBase
   {
     var customerId = GetCurrentUserId();
     await _openJobService.SelectWorkerAsync(customerId, id, request.OfferId);
+    return NoContent();
+  }
+
+  [HttpPut("{id}")]
+  [Authorize(Roles = "CUSTOMER")]
+  public async Task<ActionResult<OpenJobResponse>> UpdateJob(Guid id, [FromBody] CreateOpenJobRequest request)
+  {
+    var customerId = GetCurrentUserId();
+    var result = await _openJobService.UpdateJobAsync(customerId, id, request);
+    return Ok(result);
+  }
+
+  [HttpPost("{id}/close")]
+  [Authorize(Roles = "CUSTOMER")]
+  public async Task<IActionResult> CloseJob(Guid id, [FromBody] string? reason)
+  {
+    var customerId = GetCurrentUserId();
+    await _openJobService.CloseJobAsync(customerId, id, reason);
+    return NoContent();
+  }
+
+  [HttpPost("offers/{offerId}/reject")]
+  [Authorize(Roles = "CUSTOMER")]
+  public async Task<IActionResult> RejectOffer(Guid offerId)
+  {
+    var customerId = GetCurrentUserId();
+    await _openJobService.RejectOfferAsync(customerId, offerId);
     return NoContent();
   }
 

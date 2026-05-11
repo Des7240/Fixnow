@@ -65,7 +65,8 @@ public class PaymentService : IPaymentService
 
     await _paymentRepo.CreateAsync(payment);
 
-    var apiBaseUrl = _config["App:ApiBaseUrl"] ?? "https://localhost:7154";
+    var apiBaseUrl = _config["App:ApiBaseUrl"] 
+        ?? throw new InvalidOperationException("App:ApiBaseUrl is not configured.");
     var returnUrl = $"{apiBaseUrl}/api/v1/payments/{request.Provider.ToString().ToLower()}/callback";
 
     var paymentRequest = new PaymentRequestDto
@@ -108,7 +109,8 @@ public class PaymentService : IPaymentService
 
     await _paymentRepo.CreateAsync(payment);
 
-    var apiBaseUrl = _config["App:ApiBaseUrl"] ?? "https://localhost:7154";
+    var apiBaseUrl = _config["App:ApiBaseUrl"] 
+        ?? throw new InvalidOperationException("App:ApiBaseUrl is not configured.");
     var returnUrl = $"{apiBaseUrl}/api/v1/payments/{request.Provider.ToString().ToLower()}/callback";
 
     var paymentRequest = new PaymentRequestDto

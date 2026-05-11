@@ -12,6 +12,8 @@ public class OfferResponse
   public decimal EstimatedPrice { get; set; }
   public string Analysis { get; set; } = string.Empty;
   public int EstimatedArrivalMinutes { get; set; }
+  public int EstimatedRepairTimeMinutes { get; set; }
+  public int? WarrantyDays { get; set; }
   public OfferStatus Status { get; set; }
   public DateTime CreatedAt { get; set; }
   public List<string> FileUrls { get; set; } = new();
@@ -19,4 +21,5 @@ public class OfferResponse
   // Additional worker info for comparison
   public double WorkerRating { get; set; }
   public int WorkerCompletedJobs { get; set; }
+  public double WorkerScore { get; set; }
 }

@@ -18,7 +18,17 @@ public class OpenJob
   public Point Location { get; set; } = null!;
   
   public int RadiusKm { get; set; }
+  public decimal? MinBudget { get; set; }
+  public decimal? MaxBudget { get; set; }
+  public string? UrgencyLevel { get; set; }
+  public DateTime? ExpiresAt { get; set; }
   public OpenJobStatus Status { get; set; } = OpenJobStatus.OPEN;
+  public ModerationStatus ModerationStatus { get; set; } = ModerationStatus.PENDING;
+  public string? ModerationReason { get; set; }
+  public DateTime? ModeratedAt { get; set; }
+  public Guid? ModeratedBy { get; set; }
+  public int ReportCount { get; set; } = 0;
+  public string? ClosedReason { get; set; }
   public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
   public DateTime? UpdatedAt { get; set; }
 

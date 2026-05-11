@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Home, ListOrdered, Bell, User } from 'lucide-react';
+import { Home, ListOrdered, Bell, User, Briefcase } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useNotificationStore } from '../stores/notificationStore';
 
@@ -15,7 +15,8 @@ export default function CustomerLayout() {
 
   const navItems = [
     { path: '/', icon: Home, label: 'Trang chủ' },
-    { path: '/customer/bookings', icon: ListOrdered, label: 'Đơn của tôi' },
+    { path: '/customer/open-jobs', icon: Briefcase, label: 'Việc làm' },
+    { path: '/customer/bookings', icon: ListOrdered, label: 'Lịch hẹn' },
     { path: '/customer/notifications', icon: Bell, label: 'Thông báo', badge: unreadCount },
     { path: '/customer/profile', icon: User, label: 'Tài khoản' },
   ];

@@ -299,12 +299,14 @@ public class BookingService : IBookingService
         Id = booking.CustomerId,
         FullName = booking.Customer?.FullName ?? "Unknown",
         Email = booking.Customer?.Email ?? string.Empty,
+        AvatarUrl = booking.Customer?.AvatarUrl,
       },
       Worker = booking.Worker == null ? null : new BookingPartyDto
       {
         Id = booking.WorkerId!.Value,
         FullName = booking.Worker.FullName,
         Email = booking.Worker.Email,
+        AvatarUrl = booking.Worker.AvatarUrl,
       },
       Service = new BookingServiceDto
       {

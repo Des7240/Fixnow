@@ -47,7 +47,8 @@ if (!string.IsNullOrEmpty(databaseUrl))
         if (databaseUrl.StartsWith("postgres://") || databaseUrl.StartsWith("postgresql://")) {
             var uri = new Uri(databaseUrl);
             var userInfo = uri.UserInfo.Split(':');
-            bool isInternal = !uri.Host.Contains("."); // Simple check for internal host
+            // Check if host is internal (like Render's internal DB host)
+            bool isInternal = !uri.Host.Contains(".") || uri.Host.EndsWith("-a"); 
             var builderConn = new Npgsql.NpgsqlConnectionStringBuilder {
                 Host = uri.Host,
                 Port = uri.Port > 0 ? uri.Port : 5432,
@@ -55,35 +56,38 @@ if (!string.IsNullOrEmpty(databaseUrl))
                 Username = userInfo[0],
                 Password = userInfo.Length > 1 ? userInfo[1] : "",
                 SslMode = isInternal ? SslMode.Disable : SslMode.Require,
+                TrustServerCertificate = !isInternal,
                 Timeout = 15,
                 CommandTimeout = 30
             };
-
-            if (!isInternal) {
-                // Use indexer to avoid obsolete warning in Npgsql 8.0 while maintaining compatibility
-                builderConn["Trust Server Certificate"] = true;
-            }
 
             connectionString = builderConn.ToString();
         } else {
             connectionString = databaseUrl; // Assume it's already a valid Npgsql connection string
         }
     } catch (Exception ex) {
-        Log.Warning(ex, "Error parsing DATABASE_URL. Falling back to default.");
+        Log.Warning(ex, "Error parsing DATABASE_URL. Falling back to DefaultConnection.");
     }
 }
 
-// Log connection info (SAFE)
-try {
-    var cb = new Npgsql.NpgsqlConnectionStringBuilder(connectionString);
-    Log.Information("Database connection target: Host={Host}, Port={Port}, Database={Database}", cb.Host, cb.Port, cb.Database);
-} catch {
-    Log.Warning("Could not parse connection string for diagnostic logging.");
+// Ensure connection string is found
+if (string.IsNullOrEmpty(connectionString))
+{
+    connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 }
 
 if (string.IsNullOrEmpty(connectionString))
 {
     throw new InvalidOperationException("Database connection string is not configured.");
+}
+
+// Log connection info (SAFE - excludes password)
+try {
+    var cb = new Npgsql.NpgsqlConnectionStringBuilder(connectionString);
+    Log.Information("Database connection target: Host={Host}, Port={Port}, Database={Database}, SslMode={SslMode}", 
+        cb.Host, cb.Port, cb.Database, cb.SslMode);
+} catch {
+    Log.Warning("Could not parse connection string for diagnostic logging.");
 }
 
 var dataSourceBuilder = new Npgsql.NpgsqlDataSourceBuilder(connectionString);
@@ -408,7 +412,7 @@ app.Lifetime.ApplicationStarted.Register(() =>
             recurringJobManager.AddOrUpdate<ISystemJobService>(
                 "system-cleanup-job",
                 service => service.CleanupExpiredDataAsync(),
-                Cron.Daily);
+                Cron.Hourly);
             Log.Information("Recurring Jobs registered successfully.");
         }
     } catch (Exception ex) {
@@ -416,10 +420,21 @@ app.Lifetime.ApplicationStarted.Register(() =>
     }
 });
 
-var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-Log.Information("Starting application on port {Port}...", port);
+if (args.Length > 0 && args[0] == "seed")
+{
+    // await SeedData.Initialize(app.Services);
+}
+
 Log.Information("Calling app.Run()...");
-app.Run($"http://0.0.0.0:{port}");
+if (Environment.GetEnvironmentVariable("ASPNETCORE_URLS") != null || Environment.GetEnvironmentVariable("PORT") != null)
+{
+    var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+    app.Run($"http://0.0.0.0:{port}");
+}
+else
+{
+    app.Run();
+}
 }
 catch (Exception ex)
 {

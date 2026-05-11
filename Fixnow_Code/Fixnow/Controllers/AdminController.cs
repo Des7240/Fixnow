@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Fixnow.DTOs.Admin;
 using Fixnow.DTOs.Kyc;
+using Fixnow.DTOs.OpenJob;
 using Fixnow.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,11 +15,13 @@ public class AdminController : ControllerBase
 {
   private readonly IAdminService _adminService;
   private readonly IAuditService _auditService;
+  private readonly IOpenJobService _openJobService;
 
-  public AdminController(IAdminService adminService, IAuditService auditService)
+  public AdminController(IAdminService adminService, IAuditService auditService, IOpenJobService openJobService)
   {
     _adminService = adminService;
     _auditService = auditService;
+    _openJobService = openJobService;
   }
 
   [HttpGet("dashboard")]
@@ -106,6 +109,30 @@ public class AdminController : ControllerBase
   public async Task<IActionResult> ReviewWorkerService([FromRoute] Guid workerId, [FromRoute] Guid serviceId, [FromBody] ReviewWorkerServiceDto request)
   {
     await _adminService.ReviewWorkerServiceAsync(workerId, serviceId, GetCurrentUserId(), request);
+    return NoContent();
+  }
+
+  [HttpGet("open-jobs")]
+  [ProducesResponseType(typeof(List<OpenJobResponse>), StatusCodes.Status200OK)]
+  public async Task<IActionResult> GetAllOpenJobs()
+  {
+    var result = await _openJobService.GetAllJobsForAdminAsync();
+    return Ok(result);
+  }
+
+  [HttpPost("open-jobs/{id:guid}/moderate")]
+  [ProducesResponseType(StatusCodes.Status204NoContent)]
+  public async Task<IActionResult> ModerateOpenJob([FromRoute] Guid id, [FromBody] ModerationRequest request)
+  {
+    await _openJobService.ModerateJobAsync(GetCurrentUserId(), id, request);
+    return NoContent();
+  }
+
+  [HttpDelete("open-jobs/{id:guid}")]
+  [ProducesResponseType(StatusCodes.Status204NoContent)]
+  public async Task<IActionResult> DeleteOpenJob([FromRoute] Guid id)
+  {
+    await _openJobService.DeleteJobAsync(GetCurrentUserId(), id);
     return NoContent();
   }
 

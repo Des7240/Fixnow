@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Clock, FileText, Wrench, Shield, Send, Loader2, DollarSign, Info } from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, FileText, Wrench, Shield, Send, Loader2, DollarSign, AlertCircle } from 'lucide-react';
 import { message, Modal } from 'antd';
 import axiosInstance from '../../utils/axiosInstance';
 import { API_BASE_URL } from '../../utils/constants';
@@ -13,6 +13,9 @@ interface OpenJob {
   serviceName: string;
   createdAt: string;
   fileUrls: string[];
+  minBudget?: number;
+  maxBudget?: number;
+  urgencyLevel?: string;
 }
 
 export default function OpenJobDetails() {
@@ -27,6 +30,8 @@ export default function OpenJobDetails() {
   const [price, setPrice] = useState('');
   const [analysis, setAnalysis] = useState('');
   const [eta, setEta] = useState('30');
+  const [repairTime, setRepairTime] = useState('60');
+  const [warranty, setWarranty] = useState('30');
 
   useEffect(() => {
     fetchJobDetails();
@@ -55,11 +60,13 @@ export default function OpenJobDetails() {
       await axiosInstance.post(`/open-jobs/${id}/offers`, {
         estimatedPrice: parseFloat(price),
         analysis,
-        estimatedArrivalMinutes: parseInt(eta)
+        estimatedArrivalMinutes: parseInt(eta),
+        estimatedRepairTimeMinutes: parseInt(repairTime),
+        warrantyDays: parseInt(warranty)
       });
       message.success('Gửi báo giá thành công!');
       setOfferModal(false);
-      navigate('/worker/dashboard');
+      navigate('/worker');
     } catch (err: any) {
       message.error(err?.response?.data?.message || 'Lỗi khi gửi báo giá');
     } finally {
@@ -98,6 +105,23 @@ export default function OpenJobDetails() {
             </div>
             <h2 className="text-xl font-bold text-gray-900 mb-4">{job.title}</h2>
             
+            <div className="flex flex-wrap gap-2 mb-4">
+                {job.minBudget && (
+                    <div className="flex items-center gap-1.5 bg-green-50 text-green-700 px-3 py-1.5 rounded-xl border border-green-100">
+                        <DollarSign className="w-4 h-4" />
+                        <span className="text-sm font-bold">
+                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(job.minBudget)} - {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(job.maxBudget || 0)}
+                        </span>
+                    </div>
+                )}
+                {job.urgencyLevel && job.urgencyLevel !== 'NORMAL' && (
+                    <div className="flex items-center gap-1.5 bg-red-50 text-red-700 px-3 py-1.5 rounded-xl border border-red-100">
+                        <AlertCircle className="w-4 h-4" />
+                        <span className="text-sm font-bold uppercase">Ưu tiên: {job.urgencyLevel === 'URGENT' ? 'Gấp' : 'Rất gấp'}</span>
+                    </div>
+                )}
+            </div>
+
             <div className="space-y-3">
                 <div className="flex items-start gap-3 text-gray-600">
                     <MapPin className="w-5 h-5 text-orange-500 flex-shrink-0" />
@@ -210,6 +234,29 @@ export default function OpenJobDetails() {
                         <option value="45">45 phút</option>
                         <option value="60">1 tiếng</option>
                     </select>
+                </div>
+
+                <div className="flex gap-3">
+                    <div className="flex-1">
+                        <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Sửa trong (phút)</label>
+                        <input 
+                            type="number" 
+                            value={repairTime}
+                            onChange={(e) => setRepairTime(e.target.value)}
+                            placeholder="60"
+                            className="w-full bg-gray-50 rounded-xl border-none py-3 px-4 text-sm font-bold text-gray-900 focus:ring-2 focus:ring-orange-500/50"
+                        />
+                    </div>
+                    <div className="flex-1">
+                        <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Bảo hành (ngày)</label>
+                        <input 
+                            type="number" 
+                            value={warranty}
+                            onChange={(e) => setWarranty(e.target.value)}
+                            placeholder="30"
+                            className="w-full bg-gray-50 rounded-xl border-none py-3 px-4 text-sm font-bold text-gray-900 focus:ring-2 focus:ring-orange-500/50"
+                        />
+                    </div>
                 </div>
             </div>
 

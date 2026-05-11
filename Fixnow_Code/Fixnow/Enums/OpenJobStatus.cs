@@ -7,5 +7,6 @@ public enum OpenJobStatus
     WORKER_SELECTED,
     BOOKING_CREATED,
     EXPIRED,
-    CANCELLED
+    CANCELLED,
+    CLOSED
 }

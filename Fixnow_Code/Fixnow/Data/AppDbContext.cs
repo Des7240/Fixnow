@@ -65,6 +65,7 @@ public class AppDbContext : DbContext
   public DbSet<OpenJobAttachment> OpenJobAttachments => Set<OpenJobAttachment>();
   public DbSet<WorkerOffer> WorkerOffers => Set<WorkerOffer>();
   public DbSet<OfferAttachment> OfferAttachments => Set<OfferAttachment>();
+  public DbSet<SavedOpenJob> SavedOpenJobs => Set<SavedOpenJob>();
 
   protected override void OnModelCreating(ModelBuilder modelBuilder)
   {
@@ -152,6 +153,7 @@ public class AppDbContext : DbContext
       entity.ToTable("open_jobs");
       entity.HasKey(oj => oj.Id);
       entity.Property(oj => oj.Status).HasConversion<string>().HasMaxLength(50);
+      entity.Property(oj => oj.ModerationStatus).HasConversion<string>().HasMaxLength(50);
       entity.Property(oj => oj.Location).HasColumnType("geography(Point, 4326)");
 
       entity.HasOne(oj => oj.Customer)
@@ -186,6 +188,7 @@ public class AppDbContext : DbContext
       entity.ToTable("worker_offers");
       entity.HasKey(wo => wo.Id);
       entity.Property(wo => wo.Status).HasConversion<string>().HasMaxLength(50);
+      entity.Property(wo => wo.ModerationStatus).HasConversion<string>().HasMaxLength(50);
 
       entity.HasOne(wo => wo.OpenJob)
         .WithMany(oj => oj.Offers)
@@ -211,6 +214,24 @@ public class AppDbContext : DbContext
         .WithMany()
         .HasForeignKey(oa => oa.FileId)
         .OnDelete(DeleteBehavior.Restrict);
+    });
+
+    // ── SavedOpenJob ──────────────────────────────────────────────────────────
+    modelBuilder.Entity<SavedOpenJob>(entity =>
+    {
+      entity.ToTable("saved_open_jobs");
+      entity.HasKey(s => s.Id);
+      entity.HasIndex(s => new { s.WorkerId, s.OpenJobId }).IsUnique();
+
+      entity.HasOne(s => s.Worker)
+        .WithMany()
+        .HasForeignKey(s => s.WorkerId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+      entity.HasOne(s => s.OpenJob)
+        .WithMany()
+        .HasForeignKey(s => s.OpenJobId)
+        .OnDelete(DeleteBehavior.Cascade);
     });
 
     // ── BookingStatusHistory ───────────────────────────────────────────────────

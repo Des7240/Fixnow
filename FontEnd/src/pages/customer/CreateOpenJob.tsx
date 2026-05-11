@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, MapPin, Wrench, Clock, FileText, Navigation, Loader2, Upload, X, Shield } from 'lucide-react';
-import { message } from 'antd';
+import { ArrowLeft, MapPin, Wrench, Clock, FileText, Navigation, Loader2, Upload, X, Shield, DollarSign, AlertTriangle } from 'lucide-react';
+import { message, Select, InputNumber } from 'antd';
 import axiosInstance from '../../utils/axiosInstance';
 import { API_BASE_URL } from '../../utils/constants';
 
@@ -16,6 +16,9 @@ const openJobSchema = z.object({
   lat: z.number(),
   lng: z.number(),
   radiusKm: z.number().min(1).max(50),
+  minBudget: z.number().optional(),
+  maxBudget: z.number().optional(),
+  urgencyLevel: z.string().optional(),
 });
 
 type OpenJobForm = z.infer<typeof openJobSchema>;
@@ -245,6 +248,52 @@ export default function CreateOpenJob() {
             {uploading && <div className="mt-2 flex items-center gap-2 text-xs text-orange-600 font-medium">
                 <Loader2 className="w-3 h-3 animate-spin" /> Đang tải ảnh...
             </div>}
+          </div>
+
+          {/* Budget & Urgency */}
+          <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 space-y-4">
+            <div className="flex items-center gap-2 mb-2 text-gray-900 font-bold">
+              <DollarSign className="w-5 h-5 text-orange-500" />
+              <h2>Ngân sách & Độ ưu tiên</h2>
+            </div>
+            
+            <div className="flex items-center gap-3">
+                <div className="flex-1">
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Từ (VNĐ)</label>
+                    <InputNumber
+                        style={{ width: '100%' }}
+                        placeholder="Min"
+                        onChange={(val) => setValue('minBudget', val as number)}
+                        formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\n))/g, ',')}
+                        className="rounded-xl border-gray-100 bg-gray-50 font-bold"
+                    />
+                </div>
+                <div className="flex-1">
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Đến (VNĐ)</label>
+                    <InputNumber
+                        style={{ width: '100%' }}
+                        placeholder="Max"
+                        onChange={(val) => setValue('maxBudget', val as number)}
+                        formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\n))/g, ',')}
+                        className="rounded-xl border-gray-100 bg-gray-50 font-bold"
+                    />
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Mức độ ưu tiên</label>
+                <Select
+                    style={{ width: '100%' }}
+                    placeholder="Chọn mức độ ưu tiên"
+                    onChange={(val) => setValue('urgencyLevel', val)}
+                    className="rounded-xl overflow-hidden"
+                    options={[
+                        { label: 'Bình thường', value: 'NORMAL' },
+                        { label: 'Cần gấp', value: 'URGENT' },
+                        { label: 'Rất gấp (Ưu tiên hàng đầu)', value: 'CRITICAL' },
+                    ]}
+                />
+            </div>
           </div>
 
           {/* Radius & Location */}

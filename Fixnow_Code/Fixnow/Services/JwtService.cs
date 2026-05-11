@@ -35,6 +35,7 @@ public class JwtService : IJwtService
       new(JwtRegisteredClaimNames.Email, user.Email),
       new(ClaimTypes.Name, user.FullName),
       new(ClaimTypes.Role, user.Role.ToString()),
+      new("avatar", user.AvatarUrl ?? string.Empty),
       new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
     };
 

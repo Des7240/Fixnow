@@ -10,7 +10,11 @@ public class WorkerOffer
   public decimal EstimatedPrice { get; set; }
   public string Analysis { get; set; } = string.Empty;
   public int EstimatedArrivalMinutes { get; set; }
+  public int EstimatedRepairTimeMinutes { get; set; }
+  public int? WarrantyDays { get; set; }
   public OfferStatus Status { get; set; } = OfferStatus.SUBMITTED;
+  public ModerationStatus ModerationStatus { get; set; } = ModerationStatus.PENDING;
+  public decimal SpamScore { get; set; } = 0;
   public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
   // Navigation

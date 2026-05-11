@@ -103,7 +103,8 @@ export default function AdminKYC() {
   const getImageUrl = (path: string) => {
     if (!path) return 'https://via.placeholder.com/300x200?text=No+Image';
     if (path.startsWith('http')) return path;
-    return `https://localhost:7154/${path}`; // Adjust backend port if needed
+    const baseUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:8080';
+    return `${baseUrl}/${path}`;
   };
 
   return (

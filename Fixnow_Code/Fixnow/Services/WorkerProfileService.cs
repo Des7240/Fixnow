@@ -90,6 +90,7 @@ public class WorkerProfileService : IWorkerProfileService
       UserId = user.Id,
       FullName = user.FullName,
       Email = user.Email,
+      AvatarUrl = user.AvatarUrl,
       Bio = profile?.Bio,
       ExperienceYears = profile?.ExperienceYears ?? 0,
       AverageRating = profile?.AverageRating ?? 0,

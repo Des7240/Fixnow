@@ -1,6 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuthStore } from './stores/authStore';
+import { useNotificationStore } from './stores/notificationStore';
+import { useSignalR } from './signalr/SignalRContext';
+import { notification } from 'antd';
 
 // Public Pages
 import Login from './pages/public/Login';
@@ -12,6 +16,7 @@ import CustomerHome from './pages/customer/Home';
 import CreateBooking from './pages/customer/CreateBooking';
 import CreateOpenJob from './pages/customer/CreateOpenJob';
 import ViewOffers from './pages/customer/ViewOffers';
+import MyOpenJobs from './pages/customer/MyOpenJobs';
 import BookingsList from './pages/customer/BookingsList';
 import CustomerProfile from './pages/customer/CustomerProfile';
 
@@ -19,6 +24,7 @@ import CustomerProfile from './pages/customer/CustomerProfile';
 import WorkerLayout from './layouts/WorkerLayout';
 import WorkerDashboard from './pages/worker/Dashboard';
 import NearbyJobs from './pages/worker/NearbyJobs';
+import SavedJobs from './pages/worker/SavedJobs';
 import OpenJobDetails from './pages/worker/OpenJobDetails';
 import WorkerKYC from './pages/worker/WorkerKYC';
 import WorkerProfile from './pages/worker/WorkerProfile';
@@ -39,11 +45,33 @@ import AdminKYC from './pages/admin/AdminKYC';
 import DisputeManagement from './pages/admin/DisputeManagement';
 import AdminDisputeDetail from './pages/admin/AdminDisputeDetail';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminMarketplace from './pages/admin/AdminMarketplace';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminWorkerServices from './pages/admin/AdminWorkerServices';
 import UsersManagement from './pages/admin/UsersManagement';
 
 function App() {
+  const { connection } = useSignalR();
+  const { incrementUnreadCount } = useNotificationStore();
+
+  useEffect(() => {
+    if (connection) {
+      connection.on('ReceiveNotification', (data: any) => {
+        incrementUnreadCount();
+        
+        notification.info({
+          message: 'Thông báo mới',
+          description: data.message || data.content,
+          placement: 'topRight',
+        });
+      });
+
+      return () => {
+        connection.off('ReceiveNotification');
+      };
+    }
+  }, [connection, incrementUnreadCount]);
+
   return (
     <BrowserRouter>
       <Routes>
@@ -63,6 +91,7 @@ function App() {
           <Route element={<CustomerLayout />}>
             <Route path="/" element={<CustomerHome />} />
             <Route path="/customer/bookings" element={<BookingsList />} />
+            <Route path="/customer/open-jobs" element={<MyOpenJobs />} />
             <Route path="/customer/bookings/:id" element={<BookingDetail />} />
             <Route path="/customer/notifications" element={<NotificationsList />} />
             <Route path="/customer/profile" element={<CustomerProfile />} />
@@ -79,6 +108,7 @@ function App() {
           <Route element={<WorkerLayout />}>
             <Route path="/worker" element={<WorkerDashboard />} />
             <Route path="/worker/open-jobs/nearby" element={<NearbyJobs />} />
+            <Route path="/worker/saved-jobs" element={<SavedJobs />} />
             <Route path="/worker/bookings" element={<WorkerBookingsList />} />
             <Route path="/worker/bookings/:id" element={<BookingDetail />} />
             <Route path="/worker/notifications" element={<NotificationsList />} />
@@ -95,6 +125,7 @@ function App() {
         <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
           <Route element={<AdminLayout />}>
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/marketplace" element={<AdminMarketplace />} />
             <Route path="/admin/users" element={<UsersManagement />} />
             <Route path="/admin/kyc" element={<AdminKYC />} />
             <Route path="/admin/skills" element={<AdminWorkerServices />} />

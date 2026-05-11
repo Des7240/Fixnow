@@ -11,6 +11,7 @@ public class User
   public string Email { get; set; } = string.Empty;
   public string PasswordHash { get; set; } = string.Empty;
   public string FullName { get; set; } = string.Empty;
+  public string? AvatarUrl { get; set; }
   public UserRole Role { get; set; } = UserRole.CUSTOMER;
   public string Status { get; set; } = "ACTIVE";
   public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

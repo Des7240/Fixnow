@@ -111,6 +111,7 @@ public class AuthController : ControllerBase
       Id = Guid.Parse(userId!),
       Email = User.FindFirstValue(ClaimTypes.Email) ?? string.Empty,
       FullName = User.FindFirstValue(ClaimTypes.Name) ?? string.Empty,
+      AvatarUrl = User.FindFirstValue("avatar"),
       Role = User.FindFirstValue(ClaimTypes.Role) ?? string.Empty,
     };
 

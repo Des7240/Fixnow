@@ -60,6 +60,7 @@ public class ReviewService : IReviewService
       Id = saved.Id,
       BookingId = saved.BookingId,
       CustomerName = customer?.FullName ?? "Unknown",
+      CustomerAvatar = customer?.AvatarUrl,
       Rating = saved.Rating,
       Comment = saved.Comment,
       CreatedAt = saved.CreatedAt
@@ -75,6 +76,7 @@ public class ReviewService : IReviewService
       Id = r.Id,
       BookingId = r.BookingId,
       CustomerName = r.Customer?.FullName ?? "Unknown",
+      CustomerAvatar = r.Customer?.AvatarUrl,
       Rating = r.Rating,
       Comment = r.Comment,
       CreatedAt = r.CreatedAt

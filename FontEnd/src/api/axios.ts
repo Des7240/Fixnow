@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Get base URL from env or use default backend URL
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7154/api/v1';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
 
 export const axiosInstance = axios.create({
   baseURL: BASE_URL,

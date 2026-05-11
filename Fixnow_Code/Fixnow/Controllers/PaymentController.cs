@@ -47,7 +47,7 @@ public class PaymentController : ControllerBase
   {
     var result = await _paymentService.ProcessCallbackAsync("VNPAY", Request.Query);
     
-    var frontendUrl = _config["App:FrontendUrl"] ?? "http://localhost:5173";
+    var frontendUrl = _config["App:FrontendUrl"] ?? throw new InvalidOperationException("App:FrontendUrl is not configured.");
     return Redirect($"{frontendUrl}/payment/result?success={result.IsSuccess}&provider=vnpay");
   }
 
@@ -57,7 +57,7 @@ public class PaymentController : ControllerBase
   {
     var result = await _paymentService.ProcessCallbackAsync("MOMO", Request.Query);
     
-    var frontendUrl = _config["App:FrontendUrl"] ?? "http://localhost:5173";
+    var frontendUrl = _config["App:FrontendUrl"] ?? throw new InvalidOperationException("App:FrontendUrl is not configured.");
     return Redirect($"{frontendUrl}/payment/result?success={result.IsSuccess}&provider=momo");
   }
 }

@@ -56,6 +56,7 @@ public class AdminService : IAdminService
       Id = u.Id,
       Email = u.Email,
       FullName = u.FullName,
+      AvatarUrl = u.AvatarUrl,
       Role = u.Role.ToString(),
       Status = u.Status,
       CreatedAt = u.CreatedAt
@@ -70,6 +71,7 @@ public class AdminService : IAdminService
       Id = w.Id,
       Email = w.Email,
       FullName = w.FullName,
+      AvatarUrl = w.AvatarUrl,
       Role = w.Role.ToString(),
       Status = w.Status,
       CreatedAt = w.CreatedAt

@@ -29,4 +29,13 @@ public interface INotificationService
 
   /// <summary>Notifies a worker that their offer has been accepted.</summary>
   Task NotifyWorkerOfferAcceptedAsync(Guid workerId, Guid bookingId);
+
+  /// <summary>Notifies a customer that their open job has expired.</summary>
+  Task NotifyCustomerJobExpiredAsync(Guid customerId, Guid jobId, string title);
+
+  /// <summary>Notifies a worker that their offer has been rejected.</summary>
+  Task NotifyWorkerOfferRejectedAsync(Guid workerId, Guid jobId, string title);
+
+  /// <summary>Notifies a customer that their job has been moderated by an admin.</summary>
+  Task NotifyCustomerJobModeratedAsync(Guid customerId, Guid jobId, string title, string status, string? reason);
 }

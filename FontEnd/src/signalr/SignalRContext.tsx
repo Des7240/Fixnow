@@ -30,7 +30,7 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
-    const BASE_URL = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'https://localhost:7154';
+    const BASE_URL = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:8080';
     
     const newConnection = new signalR.HubConnectionBuilder()
       .withUrl(`${BASE_URL}/hubs/notification`, {

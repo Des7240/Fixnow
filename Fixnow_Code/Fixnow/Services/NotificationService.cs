@@ -247,4 +247,96 @@ public class NotificationService : INotificationService
       Message = "Khách hàng đã chấp nhận báo giá của bạn."
     });
   }
+
+  /// <inheritdoc/>
+  public Task NotifyCustomerJobExpiredAsync(Guid customerId, Guid jobId, string title)
+  {
+    _backgroundJobClient.Enqueue(() => DoNotifyCustomerJobExpiredAsync(customerId, jobId, title));
+    return Task.CompletedTask;
+  }
+
+  [AutomaticRetry(Attempts = 3)]
+  public async Task DoNotifyCustomerJobExpiredAsync(Guid customerId, Guid jobId, string title)
+  {
+    await _notificationRepo.AddAsync(new Notification
+    {
+      UserId = customerId,
+      Title = "Tin đăng hết hạn",
+      Content = $"Tin đăng '{title}' của bạn đã hết hạn do quá 24h mà chưa chọn thợ. Hãy đăng lại nếu vẫn cần nhé.",
+      Type = "OPEN_JOB_EXPIRED",
+      ReferenceId = jobId
+    });
+
+    await _hubContext.Clients.User(customerId.ToString()).SendAsync("ReceiveNotification", new
+    {
+      Type = "OPEN_JOB_EXPIRED",
+      ReferenceId = jobId,
+      Message = $"Tin đăng '{title}' đã hết hạn."
+    });
+  }
+
+  /// <inheritdoc/>
+  public Task NotifyWorkerOfferRejectedAsync(Guid workerId, Guid jobId, string title)
+  {
+    _backgroundJobClient.Enqueue(() => DoNotifyWorkerOfferRejectedAsync(workerId, jobId, title));
+    return Task.CompletedTask;
+  }
+
+  [AutomaticRetry(Attempts = 3)]
+  public async Task DoNotifyWorkerOfferRejectedAsync(Guid workerId, Guid jobId, string title)
+  {
+    await _notificationRepo.AddAsync(new Notification
+    {
+      UserId = workerId,
+      Title = "Báo giá không được chọn",
+      Content = $"Rất tiếc, khách hàng đã chọn thợ khác cho công việc '{title}'. Hãy tiếp tục gửi báo giá cho các công việc khác nhé.",
+      Type = "OFFER_REJECTED",
+      ReferenceId = jobId
+    });
+
+    await _hubContext.Clients.User(workerId.ToString()).SendAsync("ReceiveNotification", new
+    {
+      Type = "OFFER_REJECTED",
+      ReferenceId = jobId,
+      Message = $"Khách hàng đã chọn thợ khác cho công việc '{title}'."
+    });
+  }
+
+  /// <inheritdoc/>
+  public Task NotifyCustomerJobModeratedAsync(Guid customerId, Guid jobId, string title, string status, string? reason)
+  {
+    _backgroundJobClient.Enqueue(() => DoNotifyCustomerJobModeratedAsync(customerId, jobId, title, status, reason));
+    return Task.CompletedTask;
+  }
+
+  [AutomaticRetry(Attempts = 3)]
+  public async Task DoNotifyCustomerJobModeratedAsync(Guid customerId, Guid jobId, string title, string status, string? reason)
+  {
+    string message = status switch
+    {
+      "APPROVED" => $"Tin đăng '{title}' của bạn đã được duyệt và đang hiển thị trên hệ thống.",
+      "FLAGGED" => $"Tin đăng '{title}' của bạn bị đánh dấu vi phạm. Lý do: {reason}",
+      "REMOVED" => $"Tin đăng '{title}' của bạn đã bị gỡ bỏ do vi phạm quy định. Lý do: {reason}",
+      "BANNED" => $"Tin đăng '{title}' của bạn đã bị cấm vĩnh viễn.",
+      _ => $"Tin đăng '{title}' của bạn có cập nhật kiểm duyệt: {status}"
+    };
+
+    await _notificationRepo.AddAsync(new Notification
+    {
+      UserId = customerId,
+      Title = "Cập nhật kiểm duyệt",
+      Content = message,
+      Type = "OPEN_JOB_MODERATION",
+      ReferenceId = jobId
+    });
+
+    await _hubContext.Clients.User(customerId.ToString()).SendAsync("ReceiveNotification", new
+    {
+      Type = "OPEN_JOB_MODERATION",
+      ReferenceId = jobId,
+      Message = message,
+      Status = status,
+      Reason = reason
+    });
+  }
 }
