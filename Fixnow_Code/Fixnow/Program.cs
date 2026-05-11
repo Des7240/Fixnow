@@ -28,7 +28,12 @@ Log.Logger = new LoggerConfiguration()
   .WriteTo.Console()
     .WriteTo.Conditional(
         evt => Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") != "Production",
-        wt => wt.Seq("http://localhost:5341"))    .CreateLogger();
+        wt => wt.Seq("http://localhost:5341"))
+    .CreateLogger();
+
+try {
+  var builder = WebApplication.CreateBuilder(args);
+
   // Use Serilog
   builder.Host.UseSerilog();
 
