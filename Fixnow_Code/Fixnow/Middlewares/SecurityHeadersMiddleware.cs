@@ -17,6 +17,8 @@ public class SecurityHeadersMiddleware
     context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
     // Bắt buộc dùng HTTPS
     context.Response.Headers.Append("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+    // Cho phép Google Login pop-up hoạt động với COOP
+    context.Response.Headers.Append("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
     // Giảm thiểu rò rỉ thông tin qua Referrer
     context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
     // Tắt tự động phát hiện XSS (Dùng CSP thay thế, nhưng thêm vào cho an toàn cơ bản)

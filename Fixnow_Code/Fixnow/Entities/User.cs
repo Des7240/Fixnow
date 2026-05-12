@@ -9,8 +9,13 @@ public class User
 {
   public Guid Id { get; set; } = Guid.NewGuid();
   public string Email { get; set; } = string.Empty;
+  public bool EmailVerified { get; set; } = false;
   public string PasswordHash { get; set; } = string.Empty;
+  public string? GoogleId { get; set; }
+  public AuthProvider AuthProvider { get; set; } = AuthProvider.LOCAL;
   public string FullName { get; set; } = string.Empty;
+  public string PhoneNumber { get; set; } = string.Empty;
+  public bool NeedsPasswordReset { get; set; } = false;
   public string? AvatarUrl { get; set; }
   public UserRole Role { get; set; } = UserRole.CUSTOMER;
   public string Status { get; set; } = "ACTIVE";

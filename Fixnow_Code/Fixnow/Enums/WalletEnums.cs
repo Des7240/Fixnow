@@ -16,5 +16,6 @@ public enum WithdrawalStatus
   PROCESSING,
   SUCCESS,
   FAILED,
-  CANCELLED
+  CANCELLED,
+  REJECTED
 }

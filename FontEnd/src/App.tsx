@@ -9,6 +9,8 @@ import { notification } from 'antd';
 // Public Pages
 import Login from './pages/public/Login';
 import Register from './pages/public/Register';
+import ForgotPassword from './pages/public/ForgotPassword';
+import SetupPassword from './pages/public/SetupPassword';
 
 // Customer Pages
 import CustomerLayout from './layouts/CustomerLayout';
@@ -78,9 +80,11 @@ function App() {
         {/* Public Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         
         {/* Customer & Worker Shared Protected Routes */}
         <Route element={<ProtectedRoute allowedRoles={['CUSTOMER', 'WORKER']} />}>
+          <Route path="/setup-password" element={<SetupPassword />} />
           <Route path="/payment/result" element={<PaymentReturn />} />
           <Route path="/bookings/:id/chat" element={<ChatRoom />} />
           <Route path="/worker-profile/:id" element={<PublicWorkerProfile />} />

@@ -49,6 +49,19 @@ public class OpenJobService : IOpenJobService
 
   public async Task<OpenJobResponse> CreateJobAsync(Guid customerId, CreateOpenJobRequest request)
   {
+    var user = await _userRepo.FindByIdAsync(customerId)
+      ?? throw new KeyNotFoundException("Không tìm thấy thông tin người dùng.");
+
+    if (string.IsNullOrEmpty(user.PhoneNumber))
+    {
+        throw new InvalidOperationException("Bạn cần cập nhật số điện thoại trong hồ sơ trước khi đăng tin tìm thợ.");
+    }
+
+    if (user.NeedsPasswordReset)
+    {
+        throw new InvalidOperationException("Bạn cần thiết lập mật khẩu cho tài khoản trước khi thực hiện giao dịch này.");
+    }
+
     var location = GeomFactory.CreatePoint(new Coordinate(request.Lng, request.Lat));
 
     var openJob = new OpenJob

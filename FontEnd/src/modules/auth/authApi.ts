@@ -21,6 +21,8 @@ export interface AuthResponse {
     fullName: string;
     avatarUrl?: string;
     role: string;
+    phoneNumber?: string;
+    needsPasswordReset: boolean;
   };
 }
 
@@ -36,6 +38,18 @@ export const authApi = {
 
   changePassword: (data: any) =>
     axiosInstance.post('/auth/change-password', data),
+
+  googleLogin: (idToken: string) =>
+    axiosInstance.post<AuthResponse>('/auth/google-login', { idToken }),
+
+  forgotPassword: (email: string) =>
+    axiosInstance.post('/auth/forgot-password', { email }),
+
+  verifyResetOtp: (data: { email: string; code: string }) =>
+    axiosInstance.post('/auth/verify-reset-otp', data),
+
+  resetPassword: (data: any) =>
+    axiosInstance.post('/auth/reset-password', data),
 
   refreshToken: () =>
     axiosInstance.post<{ accessToken: string }>('/auth/refresh'),

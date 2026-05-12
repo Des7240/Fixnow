@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { User, Briefcase, Wrench, Save, Star, MessageSquare, LogOut } from 'lucide-react';
-import { message } from 'antd';
+import { User, Briefcase, Wrench, Save, Star, MessageSquare, LogOut, Lock, Shield } from 'lucide-react';
+import { message, Modal, Form, Input } from 'antd';
 import axiosInstance from '../../utils/axiosInstance';
 import { useAuthStore } from '../../stores/authStore';
 import { clsx } from 'clsx';
@@ -27,6 +27,11 @@ export default function WorkerProfile() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const { register, handleSubmit, setValue } = useForm();
 
+  // Password Modal
+  const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
+  const [passwordForm] = Form.useForm();
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -35,6 +40,7 @@ export default function WorkerProfile() {
 
         const res = await axiosInstance.get('/workers/profile');
         if (res.data) {
+          setValue('phoneNumber', res.data.phoneNumber);
           setValue('bio', res.data.bio);
           setValue('experienceYears', res.data.experienceYears);
           if (res.data.skills) {
@@ -109,6 +115,23 @@ export default function WorkerProfile() {
     }
   };
 
+  const handleChangePassword = async (values: any) => {
+    setPasswordLoading(true);
+    try {
+      await authApi.changePassword({
+        oldPassword: values.oldPassword,
+        newPassword: values.newPassword
+      });
+      message.success('Đổi mật khẩu thành công!');
+      setIsPasswordModalVisible(false);
+      passwordForm.resetFields();
+    } catch (error: any) {
+      message.error(error.response?.data?.message || 'Mật khẩu cũ không chính xác.');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
   const handleLogout = async () => {
     try {
         await authApi.logout();
@@ -156,10 +179,20 @@ export default function WorkerProfile() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
             <h3 className="flex items-center gap-2 font-bold text-gray-900 mb-4">
-              <Briefcase className="w-5 h-5 text-orange-500" /> Giới thiệu bản thân
+              <Briefcase className="w-5 h-5 text-orange-500" /> Thông tin cơ bản
             </h3>
             
             <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">Số điện thoại <span className="text-red-500">*</span></label>
+                <input
+                  {...register('phoneNumber', { required: 'Số điện thoại là bắt buộc' })}
+                  type="tel"
+                  className="w-full bg-gray-50 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                  placeholder="Ví dụ: 0987654321"
+                />
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Kinh nghiệm (Năm)</label>
                 <input
@@ -240,6 +273,22 @@ export default function WorkerProfile() {
           </button>
         </form>
 
+        <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 mt-6 cursor-pointer hover:bg-gray-50 transition-colors"
+             onClick={() => setIsPasswordModalVisible(true)}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-500">
+                <Shield size={20} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-gray-900">Đổi mật khẩu</p>
+                <p className="text-xs text-gray-500">Cập nhật mật khẩu bảo vệ tài khoản</p>
+              </div>
+            </div>
+            <Lock size={18} className="text-gray-400" />
+          </div>
+        </div>
+
         <div className="mt-8">
           <h3 className="flex items-center gap-2 font-bold text-gray-900 mb-4 px-2">
             <MessageSquare className="w-5 h-5 text-orange-500" /> Đánh giá từ khách hàng
@@ -289,6 +338,72 @@ export default function WorkerProfile() {
         </div>
         
       </div>
+
+      {/* Change Password Modal */}
+      <Modal
+          title={
+              <div className="flex items-center gap-2">
+                  <Lock size={20} className="text-orange-500" />
+                  <span>Đổi mật khẩu</span>
+              </div>
+          }
+          open={isPasswordModalVisible}
+          onCancel={() => {
+              setIsPasswordModalVisible(false);
+              passwordForm.resetFields();
+          }}
+          onOk={() => passwordForm.submit()}
+          confirmLoading={passwordLoading}
+          okText="Cập nhật"
+          cancelText="Hủy"
+          centered
+          className="rounded-2xl overflow-hidden"
+      >
+          <Form
+              form={passwordForm}
+              layout="vertical"
+              onFinish={handleChangePassword}
+              className="mt-4"
+          >
+              <Form.Item
+                  name="oldPassword"
+                  label="Mật khẩu hiện tại"
+                  rules={[{ required: true, message: 'Vui lòng nhập mật khẩu hiện tại' }]}
+              >
+                  <Input.Password placeholder="********" className="rounded-lg py-2" />
+              </Form.Item>
+
+              <Form.Item
+                  name="newPassword"
+                  label="Mật khẩu mới"
+                  rules={[
+                      { required: true, message: 'Vui lòng nhập mật khẩu mới' },
+                      { min: 6, message: 'Mật khẩu phải từ 6 ký tự trở lên' }
+                  ]}
+              >
+                  <Input.Password placeholder="********" className="rounded-lg py-2" />
+              </Form.Item>
+
+              <Form.Item
+                  name="confirmPassword"
+                  label="Xác nhận mật khẩu mới"
+                  dependencies={['newPassword']}
+                  rules={[
+                      { required: true, message: 'Vui lòng xác nhận mật khẩu mới' },
+                      ({ getFieldValue }) => ({
+                          validator(_, value) {
+                              if (!value || getFieldValue('newPassword') === value) {
+                                  return Promise.resolve();
+                              }
+                              return Promise.reject(new Error('Mật khẩu xác nhận không khớp!'));
+                          },
+                      }),
+                  ]}
+              >
+                  <Input.Password placeholder="********" className="rounded-lg py-2" />
+              </Form.Item>
+          </Form>
+      </Modal>
     </div>
   );
 }

@@ -12,6 +12,11 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
     return <Navigate to="/login" replace />;
   }
 
+  // If user needs to set a password (first time Google login)
+  if (user?.needsPasswordReset && window.location.pathname !== '/setup-password') {
+    return <Navigate to="/setup-password" replace />;
+  }
+
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
     return <Navigate to="/unauthorized" replace />;
   }

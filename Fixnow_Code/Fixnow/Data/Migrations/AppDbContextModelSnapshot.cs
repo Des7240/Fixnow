@@ -536,6 +536,40 @@ namespace Fixnow.Data.Migrations
                     b.ToTable("open_job_attachments", (string)null);
                 });
 
+            modelBuilder.Entity("Fixnow.Entities.OtpCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsUsed")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email", "Type");
+
+                    b.ToTable("otp_codes", (string)null);
+                });
+
             modelBuilder.Entity("Fixnow.Entities.Payment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -806,6 +840,78 @@ namespace Fixnow.Data.Migrations
                     b.ToTable("services", (string)null);
                 });
 
+            modelBuilder.Entity("Fixnow.Entities.ServiceCommission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("CommissionPercent")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ServiceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServiceId");
+
+                    b.ToTable("service_commissions", (string)null);
+                });
+
+            modelBuilder.Entity("Fixnow.Entities.SystemConfig", b =>
+                {
+                    b.Property<string>("ConfigKey")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ConfigValue")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("ConfigKey");
+
+                    b.ToTable("system_configs", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            ConfigKey = "MIN_WITHDRAW_AMOUNT",
+                            ConfigValue = "50000",
+                            Description = "Số tiền rút tối thiểu",
+                            UpdatedAt = new DateTime(2026, 5, 12, 17, 36, 33, 753, DateTimeKind.Utc).AddTicks(7526)
+                        },
+                        new
+                        {
+                            ConfigKey = "MAX_WITHDRAW_AMOUNT",
+                            ConfigValue = "20000000",
+                            Description = "Số tiền rút tối đa một lần",
+                            UpdatedAt = new DateTime(2026, 5, 12, 17, 36, 33, 753, DateTimeKind.Utc).AddTicks(7531)
+                        },
+                        new
+                        {
+                            ConfigKey = "DAILY_WITHDRAW_LIMIT",
+                            ConfigValue = "50000000",
+                            Description = "Hạn mức rút tiền tối đa trong ngày",
+                            UpdatedAt = new DateTime(2026, 5, 12, 17, 36, 33, 753, DateTimeKind.Utc).AddTicks(7532)
+                        });
+                });
+
             modelBuilder.Entity("Fixnow.Entities.Transaction", b =>
                 {
                     b.Property<Guid>("Id")
@@ -879,6 +985,12 @@ namespace Fixnow.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AuthProvider")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("LOCAL");
+
                     b.Property<string>("AvatarUrl")
                         .HasColumnType("text");
 
@@ -890,14 +1002,32 @@ namespace Fixnow.Data.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<bool>("EmailVerified")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("GoogleId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<bool>("NeedsPasswordReset")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("PasswordHash")
-                        .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("");
 
                     b.Property<string>("Role")
                         .IsRequired()
@@ -1636,6 +1766,17 @@ namespace Fixnow.Data.Migrations
                     b.Navigation("OpenJob");
 
                     b.Navigation("Worker");
+                });
+
+            modelBuilder.Entity("Fixnow.Entities.ServiceCommission", b =>
+                {
+                    b.HasOne("Fixnow.Entities.ServiceCategory", "Service")
+                        .WithMany()
+                        .HasForeignKey("ServiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Service");
                 });
 
             modelBuilder.Entity("Fixnow.Entities.Transaction", b =>

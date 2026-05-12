@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Wallet, ArrowDownCircle, ArrowUpCircle, History, Landmark } from 'lucide-react';
+import { ArrowLeft, Wallet, ArrowDownCircle, ArrowUpCircle, History, Landmark, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { message, Modal, Input, Radio } from 'antd';
 import axiosInstance from '../../utils/axiosInstance';
+import { walletApi } from '../../modules/wallet/walletApi';
 import { clsx } from 'clsx';
 
 interface WalletData {
@@ -27,8 +28,15 @@ export default function WalletDashboard() {
   // Withdraw Modal
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [bankInfo, setBankInfo] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountName, setAccountName] = useState('');
   const [withdrawing, setWithdrawing] = useState(false);
+
+  // OTP Modal for Withdrawal
+  const [isOtpOpen, setIsOtpOpen] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [confirming, setConfirming] = useState(false);
 
   // Deposit Modal
   const [isDepositOpen, setIsDepositOpen] = useState(false);
@@ -83,7 +91,7 @@ export default function WalletDashboard() {
     }
   };
 
-  const handleWithdraw = async () => {
+  const handleWithdrawInitiate = async () => {
     const amount = parseInt(withdrawAmount);
     if (isNaN(amount) || amount < 50000) {
       message.error('Số tiền rút tối thiểu là 50,000đ');
@@ -93,26 +101,56 @@ export default function WalletDashboard() {
       message.error('Số dư không đủ');
       return;
     }
-    if (!bankInfo.trim()) {
-      message.error('Vui lòng nhập thông tin ngân hàng');
+    if (!bankName || !accountNumber || !accountName) {
+      message.error('Vui lòng nhập đầy đủ thông tin tài khoản');
       return;
     }
 
     setWithdrawing(true);
     try {
-      await axiosInstance.post('/wallet/withdraw', {
+      await walletApi.initiateWithdraw({
         amount,
-        bankAccountInfo: bankInfo
+        bankName,
+        accountNumber,
+        accountName
       });
-      message.success('Đã gửi yêu cầu rút tiền thành công!');
+      message.success('Mã OTP đã được gửi về email của bạn');
       setIsWithdrawOpen(false);
-      setWithdrawAmount('');
-      setBankInfo('');
-      fetchWallet(); // Reload balance
+      setIsOtpOpen(true);
     } catch (err: any) {
-      message.error(err.response?.data?.message || 'Lỗi khi rút tiền');
+      message.error(err.response?.data?.message || 'Lỗi khi gửi yêu cầu');
     } finally {
       setWithdrawing(false);
+    }
+  };
+
+  const handleWithdrawConfirm = async () => {
+    if (otpCode.length !== 6) {
+      message.error('Vui lòng nhập mã OTP 6 chữ số');
+      return;
+    }
+
+    setConfirming(true);
+    try {
+      await walletApi.confirmWithdraw({
+        amount: parseInt(withdrawAmount),
+        bankName,
+        accountNumber,
+        accountName,
+        otpCode
+      });
+      message.success('Yêu cầu rút tiền đã được xác nhận!');
+      setIsOtpOpen(false);
+      setWithdrawAmount('');
+      setBankName('');
+      setAccountNumber('');
+      setAccountName('');
+      setOtpCode('');
+      fetchWallet();
+    } catch (err: any) {
+      message.error(err.response?.data?.message || 'Mã OTP không chính xác hoặc đã hết hạn');
+    } finally {
+      setConfirming(false);
     }
   };
 
@@ -246,7 +284,7 @@ export default function WalletDashboard() {
         centered
         className="rounded-3xl overflow-hidden"
       >
-        <div className="py-4 space-y-5">
+        <div className="py-2 space-y-4">
           <div className="bg-orange-50 p-4 rounded-2xl text-center">
             <p className="text-xs font-bold text-orange-600 uppercase mb-1">Số dư hiện tại</p>
             <p className="text-2xl font-black text-orange-700">{(wallet?.balance || 0).toLocaleString('vi-VN')} đ</p>
@@ -264,22 +302,91 @@ export default function WalletDashboard() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Thông tin tài khoản nhận</label>
-            <Input.TextArea
-              rows={3}
-              value={bankInfo}
-              onChange={e => setBankInfo(e.target.value)}
-              placeholder="VD: Vietcombank - 0123456789 - NGUYEN VAN A"
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Tên ngân hàng</label>
+            <Input
+              value={bankName}
+              onChange={e => setBankName(e.target.value)}
+              placeholder="VD: Vietcombank, Techcombank..."
               className="py-3 px-4 rounded-xl"
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Số tài khoản</label>
+              <Input
+                value={accountNumber}
+                onChange={e => setAccountNumber(e.target.value)}
+                placeholder="123456789..."
+                className="py-3 px-4 rounded-xl"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Tên chủ tài khoản</label>
+              <Input
+                value={accountName}
+                onChange={e => setAccountName(e.target.value.toUpperCase())}
+                placeholder="NGUYEN VAN A"
+                className="py-3 px-4 rounded-xl"
+              />
+            </div>
+          </div>
+
           <button
-            onClick={handleWithdraw}
+            onClick={handleWithdrawInitiate}
             disabled={withdrawing}
-            className="w-full py-4 bg-orange-500 text-white font-bold rounded-2xl shadow-lg shadow-orange-500/20 disabled:opacity-50 flex justify-center items-center"
+            className="w-full py-4 bg-orange-500 text-white font-bold rounded-2xl shadow-lg shadow-orange-500/20 disabled:opacity-50 flex justify-center items-center gap-2"
           >
-            {withdrawing ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : 'Xác nhận rút tiền'}
+            {withdrawing && <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
+            Gửi yêu cầu xác thực
+          </button>
+        </div>
+      </Modal>
+
+      {/* OTP Verification Modal */}
+      <Modal
+        title="Xác thực Rút tiền"
+        open={isOtpOpen}
+        onCancel={() => setIsOtpOpen(false)}
+        footer={null}
+        centered
+        className="rounded-3xl overflow-hidden"
+      >
+        <div className="py-4 space-y-6 text-center">
+          <div className="mx-auto w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center">
+            <ShieldCheck className="w-8 h-8 text-orange-500" />
+          </div>
+          
+          <div>
+            <p className="text-gray-600 mb-1">Chúng tôi đã gửi mã OTP đến email của bạn.</p>
+            <p className="text-sm text-gray-400">Vui lòng kiểm tra hộp thư để lấy mã xác nhận.</p>
+          </div>
+
+          <Input
+            value={otpCode}
+            onChange={e => setOtpCode(e.target.value)}
+            maxLength={6}
+            placeholder="Mã OTP 6 chữ số"
+            className="py-4 rounded-xl text-center text-2xl font-black tracking-[0.5em] focus:ring-orange-500"
+          />
+
+          <button
+            onClick={handleWithdrawConfirm}
+            disabled={confirming || otpCode.length !== 6}
+            className="w-full py-4 bg-orange-500 text-white font-bold rounded-2xl shadow-lg shadow-orange-500/20 disabled:opacity-50 flex justify-center items-center gap-2 transition-all"
+          >
+            {confirming && <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
+            Xác nhận rút tiền
+          </button>
+          
+          <button 
+            onClick={() => {
+                setIsOtpOpen(false);
+                setIsWithdrawOpen(true);
+            }}
+            className="text-sm text-gray-500 hover:text-orange-500 font-medium"
+          >
+            Quay lại chỉnh sửa thông tin
           </button>
         </div>
       </Modal>

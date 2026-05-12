@@ -136,6 +136,56 @@ public class AdminController : ControllerBase
     return NoContent();
   }
 
+  // Phase 6: Dynamic Config & Service CRUD
+  [HttpGet("system-configs")]
+  public async Task<IActionResult> GetSystemConfigs()
+  {
+    var result = await _adminService.GetAllConfigsAsync();
+    return Ok(result);
+  }
+
+  [HttpPut("system-configs")]
+  public async Task<IActionResult> UpdateSystemConfig([FromBody] UpdateConfigDto request)
+  {
+    await _adminService.UpdateSystemConfigAsync(request.Key, request.Value, GetCurrentUserId());
+    return NoContent();
+  }
+
+  [HttpGet("service-commissions")]
+  public async Task<IActionResult> GetServiceCommissions()
+  {
+    var result = await _adminService.GetAllCommissionsAsync();
+    return Ok(result);
+  }
+
+  [HttpPut("service-commissions")]
+  public async Task<IActionResult> UpdateServiceCommission([FromBody] UpdateCommissionDto request)
+  {
+    await _adminService.UpdateServiceCommissionAsync(request.ServiceId, request.Percent, GetCurrentUserId());
+    return NoContent();
+  }
+
+  [HttpPost("services")]
+  public async Task<IActionResult> CreateService([FromBody] CreateServiceRequestDto request)
+  {
+    var result = await _adminService.CreateServiceAsync(request, GetCurrentUserId());
+    return CreatedAtAction(nameof(CreateService), new { id = result.Id }, result);
+  }
+
+  [HttpPut("services/{id:guid}")]
+  public async Task<IActionResult> UpdateService([FromRoute] Guid id, [FromBody] UpdateServiceRequestDto request)
+  {
+    var result = await _adminService.UpdateServiceAsync(id, request, GetCurrentUserId());
+    return Ok(result);
+  }
+
+  [HttpDelete("services/{id:guid}")]
+  public async Task<IActionResult> DeleteService([FromRoute] Guid id)
+  {
+    await _adminService.DeleteServiceAsync(id, GetCurrentUserId());
+    return NoContent();
+  }
+
   private Guid GetCurrentUserId()
   {
     var sub = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");

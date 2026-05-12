@@ -59,6 +59,19 @@ public class BookingService : IBookingService
   /// <inheritdoc/>
   public async Task<BookingResponseDto> CreateBookingAsync(CreateBookingRequestDto request, Guid customerId)
   {
+    var user = await _userRepo.FindByIdAsync(customerId)
+      ?? throw new KeyNotFoundException("Không tìm thấy thông tin người dùng.");
+
+    if (string.IsNullOrEmpty(user.PhoneNumber))
+    {
+        throw new InvalidOperationException("Bạn cần cập nhật số điện thoại trong hồ sơ trước khi thực hiện đặt thợ.");
+    }
+
+    if (user.NeedsPasswordReset)
+    {
+        throw new InvalidOperationException("Bạn cần thiết lập mật khẩu cho tài khoản trước khi thực hiện giao dịch này.");
+    }
+
     var service = await _serviceRepo.FindByIdAsync(request.ServiceId)
       ?? throw new KeyNotFoundException("Service not found.");
 

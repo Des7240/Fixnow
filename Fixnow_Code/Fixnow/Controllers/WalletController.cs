@@ -57,24 +57,40 @@ public class WalletController : ControllerBase
   }
 
   /// <summary>
-  /// Tạo một yêu cầu rút tiền.
+  /// Khởi tạo yêu cầu rút tiền (Gửi OTP qua email).
   /// </summary>
   [HttpPost("withdraw")]
-  [ProducesResponseType(typeof(WithdrawalDto), StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
   public async Task<IActionResult> RequestWithdrawal([FromBody] WithdrawRequestDto request)
   {
     var userId = GetCurrentUserId();
     try
     {
-      var withdrawal = await _walletService.RequestWithdrawalAsync(userId, request);
-      return Ok(withdrawal);
+      await _walletService.InitiateWithdrawalAsync(userId, request);
+      return Ok(new { message = "Mã OTP đã được gửi về email của bạn." });
     }
-    catch (InvalidOperationException ex)
+    catch (Exception ex)
     {
       return BadRequest(new { message = ex.Message });
     }
-    catch (ArgumentException ex)
+  }
+
+  /// <summary>
+  /// Xác nhận rút tiền với mã OTP.
+  /// </summary>
+  [HttpPost("confirm-withdraw")]
+  [ProducesResponseType(typeof(WithdrawalDto), StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status400BadRequest)]
+  public async Task<IActionResult> ConfirmWithdrawal([FromBody] ConfirmWithdrawRequestDto request)
+  {
+    var userId = GetCurrentUserId();
+    try
+    {
+      var withdrawal = await _walletService.ConfirmWithdrawalAsync(userId, request);
+      return Ok(withdrawal);
+    }
+    catch (Exception ex)
     {
       return BadRequest(new { message = ex.Message });
     }

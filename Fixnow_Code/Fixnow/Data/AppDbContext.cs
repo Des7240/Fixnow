@@ -1,4 +1,5 @@
 using Fixnow.Entities;
+using Fixnow.Enums;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 
@@ -66,6 +67,9 @@ public class AppDbContext : DbContext
   public DbSet<WorkerOffer> WorkerOffers => Set<WorkerOffer>();
   public DbSet<OfferAttachment> OfferAttachments => Set<OfferAttachment>();
   public DbSet<SavedOpenJob> SavedOpenJobs => Set<SavedOpenJob>();
+  public DbSet<OtpCode> OtpCodes => Set<OtpCode>();
+  public DbSet<SystemConfig> SystemConfigs => Set<SystemConfig>();
+  public DbSet<ServiceCommission> ServiceCommissions => Set<ServiceCommission>();
 
   protected override void OnModelCreating(ModelBuilder modelBuilder)
   {
@@ -74,6 +78,39 @@ public class AppDbContext : DbContext
     // Enable PostGIS extension
     modelBuilder.HasPostgresExtension("postgis");
 
+    // ── SystemConfig ──────────────────────────────────────────────────────────
+    modelBuilder.Entity<SystemConfig>(entity =>
+    {
+      entity.ToTable("system_configs");
+      entity.HasKey(c => c.ConfigKey);
+      
+      entity.HasData(
+          new SystemConfig { ConfigKey = "MIN_WITHDRAW_AMOUNT", ConfigValue = "50000", Description = "Số tiền rút tối thiểu" },
+          new SystemConfig { ConfigKey = "MAX_WITHDRAW_AMOUNT", ConfigValue = "20000000", Description = "Số tiền rút tối đa một lần" },
+          new SystemConfig { ConfigKey = "DAILY_WITHDRAW_LIMIT", ConfigValue = "50000000", Description = "Hạn mức rút tiền tối đa trong ngày" }
+      );
+    });
+
+    // ── ServiceCommission ─────────────────────────────────────────────────────
+    modelBuilder.Entity<ServiceCommission>(entity =>
+    {
+      entity.ToTable("service_commissions");
+      entity.HasKey(c => c.Id);
+      entity.HasOne(c => c.Service)
+            .WithMany()
+            .HasForeignKey(c => c.ServiceId)
+            .OnDelete(DeleteBehavior.Cascade);
+    });
+
+    // ── OtpCode ───────────────────────────────────────────────────────────────
+    modelBuilder.Entity<OtpCode>(entity =>
+    {
+      entity.ToTable("otp_codes");
+      entity.HasKey(o => o.Id);
+      entity.HasIndex(o => new { o.Email, o.Type });
+      entity.Property(o => o.Type).HasConversion<string>();
+    });
+
     // ── User ──────────────────────────────────────────────────────────────────
     modelBuilder.Entity<User>(entity =>
     {
@@ -81,8 +118,12 @@ public class AppDbContext : DbContext
       entity.HasKey(u => u.Id);
       entity.HasIndex(u => u.Email).IsUnique();
       entity.Property(u => u.Email).IsRequired().HasMaxLength(255);
-      entity.Property(u => u.PasswordHash).IsRequired();
+      entity.Property(u => u.EmailVerified).HasDefaultValue(false);
+      entity.Property(u => u.PasswordHash).IsRequired(false); // Can be null for Google users
+      entity.Property(u => u.GoogleId).HasMaxLength(255);
+      entity.Property(u => u.AuthProvider).HasConversion<string>().HasDefaultValue(AuthProvider.LOCAL);
       entity.Property(u => u.FullName).IsRequired().HasMaxLength(200);
+      entity.Property(u => u.PhoneNumber).IsRequired().HasMaxLength(20).HasDefaultValue("");
       entity.Property(u => u.Role).HasConversion<string>();
       entity.Property(u => u.Status).HasMaxLength(50).HasDefaultValue("ACTIVE");
 

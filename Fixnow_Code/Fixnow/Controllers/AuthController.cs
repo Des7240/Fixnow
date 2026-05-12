@@ -50,6 +50,23 @@ public class AuthController : ControllerBase
     return Ok(result);
   }
 
+  /// <summary>Login with Google ID Token.</summary>
+  [HttpPost("google-login")]
+  [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequestDto request)
+  {
+    var result = await _authService.GoogleLoginAsync(request);
+
+    // Set refresh token as HttpOnly cookie
+    SetRefreshTokenCookie(result.RefreshToken);
+
+    // Clear refresh token from body
+    result.RefreshToken = string.Empty;
+
+    return Ok(result);
+  }
+
   /// <summary>Refresh the access token using the refresh token cookie.</summary>
   [HttpPost("refresh")]
   [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
@@ -94,6 +111,44 @@ public class AuthController : ControllerBase
     var userId = GetCurrentUserId();
     await _authService.ChangePasswordAsync(userId, request);
     return Ok(new { message = "Đổi mật khẩu thành công." });
+  }
+
+  /// <summary>Request a password reset OTP via email.</summary>
+  [HttpPost("forgot-password")]
+  [EnableRateLimiting("otp-policy")]
+  [ProducesResponseType(StatusCodes.Status200OK)]
+  public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto request)
+  {
+    await _authService.ForgotPasswordAsync(request);
+    return Ok(new { message = "Nếu email tồn tại, mã OTP đã được gửi." });
+  }
+
+  /// <summary>Verify the password reset OTP.</summary>
+  [HttpPost("verify-reset-otp")]
+  [ProducesResponseType(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status400BadRequest)]
+  public async Task<IActionResult> VerifyResetOtp([FromBody] VerifyOtpRequestDto request)
+  {
+    var isValid = await _authService.VerifyResetOtpAsync(request);
+    if (!isValid) return BadRequest(new { message = "Mã xác thực không chính xác hoặc đã hết hạn." });
+    return Ok(new { message = "Mã xác thực hợp lệ." });
+  }
+
+  /// <summary>Reset password using the OTP code.</summary>
+  [HttpPost("reset-password")]
+  [ProducesResponseType(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status400BadRequest)]
+  public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequestDto request)
+  {
+    try
+    {
+      await _authService.ResetPasswordAsync(request);
+      return Ok(new { message = "Mật khẩu đã được đặt lại thành công." });
+    }
+    catch (InvalidOperationException ex)
+    {
+      return BadRequest(new { message = ex.Message });
+    }
   }
 
   /// <summary>Get current authenticated user info.</summary>

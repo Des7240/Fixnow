@@ -56,7 +56,6 @@ if (!string.IsNullOrEmpty(databaseUrl))
                 Username = userInfo[0],
                 Password = userInfo.Length > 1 ? userInfo[1] : "",
                 SslMode = isInternal ? SslMode.Disable : SslMode.Require,
-                TrustServerCertificate = !isInternal,
                 Timeout = 15,
                 CommandTimeout = 30
             };
@@ -180,6 +179,9 @@ builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 
 // ─── Services ─────────────────────────────────────────────────────────────────
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
@@ -382,7 +384,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors();
 
-if (!app.Environment.IsProduction())
+if (app.Environment.IsProduction())
 {
     app.UseHttpsRedirection();
 }

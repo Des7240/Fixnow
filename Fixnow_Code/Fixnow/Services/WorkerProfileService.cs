@@ -35,6 +35,12 @@ public class WorkerProfileService : IWorkerProfileService
 
   public async Task<WorkerProfileDto> UpdateProfileAsync(Guid workerId, UpdateWorkerProfileDto request)
   {
+    var user = await _userRepo.FindByIdAsync(workerId)
+      ?? throw new KeyNotFoundException("Worker not found.");
+
+    user.PhoneNumber = request.PhoneNumber;
+    await _userRepo.UpdateAsync(user);
+
     var profile = await _profileRepo.FindByWorkerIdAsync(workerId);
     if (profile is null)
     {
@@ -90,6 +96,7 @@ public class WorkerProfileService : IWorkerProfileService
       UserId = user.Id,
       FullName = user.FullName,
       Email = user.Email,
+      PhoneNumber = user.PhoneNumber,
       AvatarUrl = user.AvatarUrl,
       Bio = profile?.Bio,
       ExperienceYears = profile?.ExperienceYears ?? 0,

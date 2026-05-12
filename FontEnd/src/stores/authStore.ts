@@ -7,6 +7,8 @@ interface User {
   id: string;
   email: string;
   fullName: string;
+  phoneNumber?: string;
+  needsPasswordReset?: boolean;
   role: Role;
 }
 

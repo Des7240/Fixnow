@@ -170,4 +170,97 @@ public class AdminService : IAdminService
     await _workerServiceRepo.UpdateServiceStatusAsync(workerId, serviceId, request.Status);
     await _auditService.LogActionAsync($"WORKER_SERVICE_{request.Status}", "WorkerService", adminId, "ADMIN", workerId, null, $"{{ \"serviceId\": \"{serviceId}\" }}");
   }
+
+  // Phase 6: Dynamic Config & Service CRUD
+  public async Task UpdateSystemConfigAsync(string key, string value, Guid adminId)
+  {
+    var config = await _db.SystemConfigs.FindAsync(key)
+      ?? throw new KeyNotFoundException($"Config key {key} not found.");
+
+    config.ConfigValue = value;
+    config.UpdatedAt = DateTime.UtcNow;
+    await _db.SaveChangesAsync();
+
+    await _auditService.LogActionAsync("SYSTEM_CONFIG_UPDATED", "SystemConfig", adminId, "ADMIN", null, null, $"{{ \"key\": \"{key}\", \"newValue\": \"{value}\" }}");
+  }
+
+  public async Task<List<Entities.SystemConfig>> GetAllConfigsAsync()
+  {
+    return await _db.SystemConfigs.ToListAsync();
+  }
+
+  public async Task UpdateServiceCommissionAsync(Guid serviceId, decimal percent, Guid adminId)
+  {
+    var commission = await _db.ServiceCommissions.FirstOrDefaultAsync(c => c.ServiceId == serviceId);
+    if (commission == null)
+    {
+        commission = new Entities.ServiceCommission
+        {
+            ServiceId = serviceId,
+            CommissionPercent = percent
+        };
+        _db.ServiceCommissions.Add(commission);
+    }
+    else
+    {
+        commission.CommissionPercent = percent;
+        commission.UpdatedAt = DateTime.UtcNow;
+    }
+    await _db.SaveChangesAsync();
+
+    await _auditService.LogActionAsync("SERVICE_COMMISSION_UPDATED", "ServiceCommission", adminId, "ADMIN", serviceId, null, $"{{ \"percent\": {percent} }}");
+  }
+
+  public async Task<List<Entities.ServiceCommission>> GetAllCommissionsAsync()
+  {
+    return await _db.ServiceCommissions.Include(c => c.Service).ToListAsync();
+  }
+
+  public async Task<Entities.ServiceCategory> CreateServiceAsync(CreateServiceRequestDto request, Guid adminId)
+  {
+    var service = new Entities.ServiceCategory
+    {
+        Name = request.Name,
+        Description = request.Description,
+        IconUrl = request.IconUrl,
+        BasePrice = request.BasePrice,
+        EstimatedDurationMinutes = request.EstimatedDurationMinutes,
+        IsActive = true
+    };
+
+    _db.ServiceCategories.Add(service);
+    await _db.SaveChangesAsync();
+
+    await _auditService.LogActionAsync("SERVICE_CREATED", "ServiceCategory", adminId, "ADMIN", service.Id, null, $"{{ \"name\": \"{service.Name}\" }}");
+    return service;
+  }
+
+  public async Task<Entities.ServiceCategory> UpdateServiceAsync(Guid serviceId, UpdateServiceRequestDto request, Guid adminId)
+  {
+    var service = await _db.ServiceCategories.FindAsync(serviceId)
+      ?? throw new KeyNotFoundException("Service not found.");
+
+    service.Name = request.Name;
+    service.Description = request.Description;
+    service.IconUrl = request.IconUrl;
+    service.BasePrice = request.BasePrice;
+    service.EstimatedDurationMinutes = request.EstimatedDurationMinutes;
+    service.IsActive = request.IsActive;
+
+    await _db.SaveChangesAsync();
+
+    await _auditService.LogActionAsync("SERVICE_UPDATED", "ServiceCategory", adminId, "ADMIN", service.Id, null, $"{{ \"name\": \"{service.Name}\" }}");
+    return service;
+  }
+
+  public async Task DeleteServiceAsync(Guid serviceId, Guid adminId)
+  {
+    var service = await _db.ServiceCategories.FindAsync(serviceId)
+      ?? throw new KeyNotFoundException("Service not found.");
+
+    service.IsActive = false; // Soft delete
+    await _db.SaveChangesAsync();
+
+    await _auditService.LogActionAsync("SERVICE_DEACTIVATED", "ServiceCategory", adminId, "ADMIN", serviceId, null, null);
+  }
 }

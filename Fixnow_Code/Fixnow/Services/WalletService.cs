@@ -16,6 +16,8 @@ public class WalletService : IWalletService
   private readonly IBookingRepository _bookingRepo;
   private readonly AppDbContext _db;
   private readonly IAuditService _auditService;
+  private readonly IOtpService _otpService;
+  private readonly IUserRepository _userRepo;
 
   public WalletService(
     IWalletRepository walletRepo,
@@ -23,7 +25,9 @@ public class WalletService : IWalletService
     IWithdrawalRepository withdrawalRepo,
     IBookingRepository bookingRepo,
     AppDbContext db,
-    IAuditService auditService)
+    IAuditService auditService,
+    IOtpService otpService,
+    IUserRepository userRepo)
   {
     _walletRepo = walletRepo;
     _transactionRepo = transactionRepo;
@@ -31,6 +35,8 @@ public class WalletService : IWalletService
     _bookingRepo = bookingRepo;
     _db = db;
     _auditService = auditService;
+    _otpService = otpService;
+    _userRepo = userRepo;
   }
 
   public async Task<WalletDto> GetWalletAsync(Guid userId)
@@ -102,8 +108,11 @@ public class WalletService : IWalletService
     var totalAmount = booking.TotalAmount ?? 0;
     if (totalAmount <= 0) return;
 
-    // Fixed commission rate: 10%
-    var commissionRate = 0.1m;
+    // Get dynamic commission rate for this service
+    var commissionConfig = await _db.ServiceCommissions
+        .FirstOrDefaultAsync(c => c.ServiceId == booking.ServiceId && c.IsActive);
+    
+    var commissionRate = commissionConfig?.CommissionPercent / 100m ?? 0.1m; // Default 10%
     var commissionFee = totalAmount * commissionRate;
     var workerIncome = totalAmount - commissionFee;
 
@@ -140,13 +149,13 @@ public class WalletService : IWalletService
         BalanceBefore = balanceBefore2,
         BalanceAfter = balanceAfter2,
         ReferenceId = booking.Id,
-        Description = "Platform commission fee (10%)"
+        Description = $"Platform commission fee ({commissionRate * 100}%)"
       });
 
       await _walletRepo.UpdateAsync(wallet);
       await transaction.CommitAsync();
 
-      await _auditService.LogActionAsync("WALLET_CREDIT", "Wallet", booking.WorkerId.Value, "WORKER", wallet.Id, null, $"Added {workerIncome} net income");
+      await _auditService.LogActionAsync("WALLET_CREDIT", "Wallet", booking.WorkerId.Value, "WORKER", wallet.Id, null, $"Added {workerIncome} net income (Commission: {commissionRate * 100}%)");
     }
     catch
     {
@@ -207,26 +216,67 @@ public class WalletService : IWalletService
     }
   }
 
-  public async Task<WithdrawalDto> RequestWithdrawalAsync(Guid userId, WithdrawRequestDto request)
+  public async Task InitiateWithdrawalAsync(Guid userId, WithdrawRequestDto request)
   {
     if (request.Amount <= 0)
-      throw new ArgumentException("Withdrawal amount must be greater than zero.");
+      throw new ArgumentException("Số tiền rút phải lớn hơn 0.");
+
+    var minAmountConfig = await _db.SystemConfigs.FindAsync("MIN_WITHDRAW_AMOUNT");
+    var maxAmountConfig = await _db.SystemConfigs.FindAsync("MAX_WITHDRAW_AMOUNT");
+    var dailyLimitConfig = await _db.SystemConfigs.FindAsync("DAILY_WITHDRAW_LIMIT");
+
+    decimal minAmount = decimal.Parse(minAmountConfig?.ConfigValue ?? "50000");
+    decimal maxAmount = decimal.Parse(maxAmountConfig?.ConfigValue ?? "20000000");
+    decimal dailyLimit = decimal.Parse(dailyLimitConfig?.ConfigValue ?? "50000000");
+
+    if (request.Amount < minAmount)
+        throw new InvalidOperationException($"Số tiền rút tối thiểu là {minAmount:N0} VNĐ.");
+    if (request.Amount > maxAmount)
+        throw new InvalidOperationException($"Số tiền rút tối đa một lần là {maxAmount:N0} VNĐ.");
 
     var wallet = await GetOrCreateWalletAsync(userId);
-    
+
+    // Check daily limit
+    var todayStart = DateTime.UtcNow.Date;
+    var todayWithdrawalsTotal = await _db.Withdrawals
+        .Where(w => w.WalletId == wallet.Id && w.CreatedAt >= todayStart && w.Status != WithdrawalStatus.REJECTED)
+        .SumAsync(w => w.Amount);
+
+    if (todayWithdrawalsTotal + request.Amount > dailyLimit)
+        throw new InvalidOperationException($"Bạn đã vượt quá hạn mức rút tiền trong ngày ({dailyLimit:N0} VNĐ).");
+
     if (wallet.Balance < request.Amount)
-      throw new InvalidOperationException("Insufficient balance.");
+      throw new InvalidOperationException("Số dư không đủ.");
+
+    var user = await _userRepo.FindByIdAsync(userId)
+      ?? throw new KeyNotFoundException("User not found.");
+
+    await _otpService.GenerateOtpAsync(user.Email, OtpType.WITHDRAWAL_VERIFICATION, "Xác nhận rút tiền");
+    
+    await _auditService.LogActionAsync("WITHDRAWAL_INITIATED", "Wallet", userId, "WORKER", wallet.Id, null, $"Requested OTP for withdrawal of {request.Amount}");
+  }
+
+  public async Task<WithdrawalDto> ConfirmWithdrawalAsync(Guid userId, ConfirmWithdrawRequestDto request)
+  {
+    var user = await _userRepo.FindByIdAsync(userId)
+      ?? throw new KeyNotFoundException("User not found.");
+
+    var isValid = await _otpService.VerifyOtpAsync(user.Email, request.OtpCode, OtpType.WITHDRAWAL_VERIFICATION);
+    if (!isValid)
+      throw new InvalidOperationException("Mã xác thực không chính xác hoặc đã hết hạn.");
+
+    var wallet = await GetOrCreateWalletAsync(userId);
+    if (wallet.Balance < request.Amount)
+      throw new InvalidOperationException("Số dư không đủ tại thời điểm xác nhận.");
 
     using var transaction = await _db.Database.BeginTransactionAsync();
     try
     {
       var balanceBefore = wallet.Balance;
       var balanceAfter = wallet.Balance - request.Amount;
-      
-      // Deduct balance
+
       wallet.Balance = balanceAfter;
-      // You could optionally add to PendingBalance here, but usually deductive is safer.
-      
+
       await _transactionRepo.CreateAsync(new WalletTransaction
       {
         WalletId = wallet.Id,
@@ -234,7 +284,7 @@ public class WalletService : IWalletService
         Amount = -request.Amount,
         BalanceBefore = balanceBefore,
         BalanceAfter = balanceAfter,
-        Description = "Withdrawal request"
+        Description = "Withdrawal request confirmed"
       });
 
       var withdrawal = await _withdrawalRepo.CreateAsync(new Withdrawal
@@ -250,7 +300,7 @@ public class WalletService : IWalletService
       await _walletRepo.UpdateAsync(wallet);
       await transaction.CommitAsync();
 
-      await _auditService.LogActionAsync("WITHDRAWAL_REQUEST", "Wallet", userId, "WORKER", withdrawal.Id, null, $"Requested {request.Amount}");
+      await _auditService.LogActionAsync("WITHDRAWAL_CONFIRMED", "Wallet", userId, "WORKER", withdrawal.Id, null, $"Withdrawal of {request.Amount} confirmed");
 
       return new WithdrawalDto
       {

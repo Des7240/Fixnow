@@ -10,6 +10,7 @@ public class WorkerProfileDto
   public Guid UserId { get; set; }
   public string FullName { get; set; } = string.Empty;
   public string Email { get; set; } = string.Empty;
+  public string? PhoneNumber { get; set; }
   public string? AvatarUrl { get; set; }
   public string? Bio { get; set; }
   public int ExperienceYears { get; set; }

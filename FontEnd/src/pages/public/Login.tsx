@@ -7,6 +7,7 @@ import { message } from 'antd';
 import { Mail, Lock, Zap } from 'lucide-react';
 import { authApi } from '../../modules/auth/authApi';
 import { useAuthStore } from '../../stores/authStore';
+import GoogleLoginButton from '../../components/GoogleLoginButton';
 
 const loginSchema = z.object({
   email: z.string().email('Email không hợp lệ'),
@@ -121,6 +122,11 @@ export default function Login() {
                 />
               </div>
               {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
+              <div className="flex justify-end mt-1">
+                <Link to="/forgot-password" id="forgot-password-link" className="text-xs text-orange-500 hover:underline">
+                  Quên mật khẩu?
+                </Link>
+              </div>
             </div>
 
             {/* Submit */}
@@ -135,6 +141,17 @@ export default function Login() {
               ) : null}
               {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </button>
+
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-gray-50 text-gray-500 uppercase tracking-wider text-xs font-medium">Hoặc đăng nhập với</span>
+              </div>
+            </div>
+
+            <GoogleLoginButton />
           </form>
 
           <p className="text-center text-gray-500 text-sm mt-8">
