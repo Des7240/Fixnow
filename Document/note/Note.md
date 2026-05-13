@@ -21,8 +21,8 @@ docker run -d ^
 
 
     {
-   2       "email": "admin@fixnow.com",
-   3       "password": "AdminPassword123",
-   4       "fullName": "Administrator",
-   5       "role": "ADMIN"
-   6     }
+          "email": "admin@fixnow.com",
+          "password": "AdminPassword123",
+          "fullName": "Administrator",
+         "role": "ADMIN"
+    }
