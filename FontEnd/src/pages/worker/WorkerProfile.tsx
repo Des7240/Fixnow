@@ -90,10 +90,20 @@ export default function WorkerProfile() {
   const onSubmit = async (data: any) => {
     setLoading(true);
     try {
-      await axiosInstance.post('/workers/profile', {
+      const profileRes = await axiosInstance.post('/workers/profile', {
+        phoneNumber: data.phoneNumber,
         bio: data.bio,
         experienceYears: parseInt(data.experienceYears) || 0
       });
+
+      // Update auth store with new phone number
+      if (profileRes.data && user) {
+        useAuthStore.getState().setUser({
+          ...user,
+          phoneNumber: profileRes.data.phoneNumber
+        });
+      }
+
       const res = await axiosInstance.post('/workers/profile/skills', {
         serviceIds: selectedSkills
       });

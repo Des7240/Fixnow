@@ -47,14 +47,20 @@ const CustomerProfile: React.FC = () => {
         try {
             const res = await authApi.updateProfile({
                 fullName: values.fullName,
-                phoneNumber: values.phoneNumber
+                phoneNumber: values.phoneNumber,
+                avatarUrl: user.avatarUrl
             });
-            // Update local store with new user data
-            useAuthStore.getState().setUser(res.data.user);
+            
+            // Update local store with new user data and token
+            const { accessToken, user: updatedUser } = res.data;
+            useAuthStore.getState().setAuth(updatedUser as any, accessToken);
+            
             message.success('Cập nhật thông tin thành công!');
             setIsProfileModalVisible(false);
         } catch (error: any) {
-            message.error(error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật.');
+            const errorMsg = error.response?.data?.message || error.message || 'Có lỗi xảy ra khi cập nhật.';
+            message.error(errorMsg);
+            console.error('Update profile error:', error);
         } finally {
             setLoading(false);
         }

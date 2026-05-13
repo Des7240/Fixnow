@@ -8,6 +8,7 @@ interface User {
   email: string;
   fullName: string;
   phoneNumber?: string;
+  avatarUrl?: string;
   needsPasswordReset?: boolean;
   role: Role;
 }
@@ -17,6 +18,7 @@ interface AuthState {
   accessToken: string | null;
   isAuthenticated: boolean;
   setAuth: (user: User, token: string) => void;
+  setUser: (user: User) => void;
   setAccessToken: (token: string) => void;
   logout: () => void;
 }
@@ -29,6 +31,7 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
 
       setAuth: (user, token) => set({ user, accessToken: token, isAuthenticated: true }),
+      setUser: (user) => set({ user }),
       setAccessToken: (token) => set({ accessToken: token }),
       logout: () => set({ user: null, accessToken: null, isAuthenticated: false }),
     }),
