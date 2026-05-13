@@ -145,12 +145,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
-var corsSettings = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+
 // Support comma-separated string from environment variable "Cors__AllowedOrigins"
-var rawCors = builder.Configuration["Cors:AllowedOrigins"];
-var allowedOrigins = !string.IsNullOrEmpty(rawCors) && rawCors.Contains(",") 
-    ? rawCors.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(o => o.Trim()).ToArray()
-    : corsSettings;
+var rawEnvCors = Environment.GetEnvironmentVariable("Cors__AllowedOrigins");
+if (!string.IsNullOrEmpty(rawEnvCors))
+{
+    allowedOrigins = rawEnvCors.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                .Select(o => o.Trim())
+                                .ToArray();
+}
 
 builder.Services.AddCors(options =>
 {
