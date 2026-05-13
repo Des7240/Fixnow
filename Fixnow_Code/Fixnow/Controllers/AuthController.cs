@@ -173,6 +173,22 @@ public class AuthController : ControllerBase
     return Ok(userInfo);
   }
 
+  /// <summary>Update current user's profile.</summary>
+  [HttpPut("profile")]
+  [Authorize]
+  [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
+  public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequestDto request)
+  {
+    var userId = GetCurrentUserId();
+    var result = await _authService.UpdateProfileAsync(userId, request);
+    
+    // Set refresh token as HttpOnly cookie if it was regenerated
+    SetRefreshTokenCookie(result.RefreshToken);
+    result.RefreshToken = string.Empty;
+
+    return Ok(result);
+  }
+
   /// <summary>Sets the refresh token as an HttpOnly cookie.</summary>
   private void SetRefreshTokenCookie(string token)
   {

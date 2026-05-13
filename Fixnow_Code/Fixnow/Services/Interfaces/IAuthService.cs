@@ -16,4 +16,5 @@ public interface IAuthService
   Task ForgotPasswordAsync(ForgotPasswordRequestDto request);
   Task<bool> VerifyResetOtpAsync(VerifyOtpRequestDto request);
   Task ResetPasswordAsync(ResetPasswordRequestDto request);
+  Task<AuthResponseDto> UpdateProfileAsync(Guid userId, UpdateProfileRequestDto request);
 }

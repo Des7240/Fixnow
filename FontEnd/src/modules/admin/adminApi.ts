@@ -40,7 +40,7 @@ export const adminApi = {
 
   // Services
   getServices: () =>
-    axiosInstance.get('/services'),
+    axiosInstance.get('/admin/services'),
 
   createService: (data: CreateServiceRequest) =>
     axiosInstance.post('/admin/services', data),

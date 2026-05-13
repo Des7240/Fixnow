@@ -9,7 +9,9 @@ const CustomerProfile: React.FC = () => {
     const { user, logout } = useAuthStore();
     const navigate = useNavigate();
     const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
+    const [isProfileModalVisible, setIsProfileModalVisible] = useState(false);
     const [form] = Form.useForm();
+    const [profileForm] = Form.useForm();
     const [loading, setLoading] = useState(false);
 
     const handleLogout = async () => {
@@ -35,6 +37,24 @@ const CustomerProfile: React.FC = () => {
             form.resetFields();
         } catch (error: any) {
             message.error(error.response?.data?.message || 'Mật khẩu cũ không chính xác.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUpdateProfile = async (values: any) => {
+        setLoading(true);
+        try {
+            const res = await authApi.updateProfile({
+                fullName: values.fullName,
+                phoneNumber: values.phoneNumber
+            });
+            // Update local store with new user data
+            useAuthStore.getState().setUser(res.data.user);
+            message.success('Cập nhật thông tin thành công!');
+            setIsProfileModalVisible(false);
+        } catch (error: any) {
+            message.error(error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật.');
         } finally {
             setLoading(false);
         }
@@ -79,9 +99,20 @@ const CustomerProfile: React.FC = () => {
                         </div>
                         <div className="flex-1">
                             <p className="text-xs text-gray-500">Số điện thoại</p>
-                            <p className="text-sm font-medium text-gray-800">Đang cập nhật</p>
+                            <p className="text-sm font-medium text-gray-800">{user.phoneNumber || 'Đang cập nhật'}</p>
                         </div>
-                        <button className="text-blue-600 text-sm font-medium">Thêm</button>
+                        <button 
+                            onClick={() => {
+                                profileForm.setFieldsValue({
+                                    fullName: user.fullName,
+                                    phoneNumber: user.phoneNumber
+                                });
+                                setIsProfileModalVisible(true);
+                            }}
+                            className="text-blue-600 text-sm font-medium"
+                        >
+                            {user.phoneNumber ? 'Sửa' : 'Thêm'}
+                        </button>
                     </div>
 
                     <div 
@@ -126,6 +157,50 @@ const CustomerProfile: React.FC = () => {
                 
                 <p className="text-center text-xs text-gray-400">Phiên bản 1.0.0 (MVP)</p>
             </div>
+
+            {/* Profile Modal */}
+            <Modal
+                title={
+                    <div className="flex items-center gap-2">
+                        <User size={20} className="text-blue-500" />
+                        <span>Cập nhật thông tin cá nhân</span>
+                    </div>
+                }
+                open={isProfileModalVisible}
+                onCancel={() => setIsProfileModalVisible(false)}
+                onOk={() => profileForm.submit()}
+                confirmLoading={loading}
+                okText="Lưu"
+                cancelText="Hủy"
+                centered
+                className="rounded-2xl overflow-hidden"
+            >
+                <Form
+                    form={profileForm}
+                    layout="vertical"
+                    onFinish={handleUpdateProfile}
+                    className="mt-4"
+                >
+                    <Form.Item
+                        name="fullName"
+                        label="Họ và tên"
+                        rules={[{ required: true, message: 'Vui lòng nhập họ tên' }]}
+                    >
+                        <Input placeholder="Nguyễn Văn A" className="rounded-lg py-2" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="phoneNumber"
+                        label="Số điện thoại"
+                        rules={[
+                            { required: true, message: 'Vui lòng nhập số điện thoại' },
+                            { pattern: /^[0-9]{10,11}$/, message: 'Số điện thoại không hợp lệ' }
+                        ]}
+                    >
+                        <Input placeholder="0987654321" className="rounded-lg py-2" />
+                    </Form.Item>
+                </Form>
+            </Modal>
 
             {/* Change Password Modal */}
             <Modal

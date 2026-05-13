@@ -225,6 +225,27 @@ public class AuthService : IAuthService
     await _auditService.LogActionAsync("PASSWORD_RESET_SUCCESS", "User", user.Id, user.Role.ToString(), user.Id, null, null);
   }
 
+  /// <inheritdoc/>
+  public async Task<AuthResponseDto> UpdateProfileAsync(Guid userId, UpdateProfileRequestDto request)
+  {
+    var user = await _userRepo.FindByIdAsync(userId)
+      ?? throw new KeyNotFoundException("User not found.");
+
+    user.FullName = request.FullName;
+    user.PhoneNumber = request.PhoneNumber ?? string.Empty;
+    if (!string.IsNullOrEmpty(request.AvatarUrl))
+    {
+        user.AvatarUrl = request.AvatarUrl;
+    }
+    user.UpdatedAt = DateTime.UtcNow;
+
+    await _userRepo.UpdateAsync(user);
+
+    await _auditService.LogActionAsync("UPDATE_PROFILE_SUCCESS", "User", userId, user.Role.ToString(), userId, null, null);
+
+    return await BuildAuthResponseAsync(user);
+  }
+
   /// <summary>Builds a full auth response with new access + refresh tokens.</summary>
   private async Task<AuthResponseDto> BuildAuthResponseAsync(User user)
   {

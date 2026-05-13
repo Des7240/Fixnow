@@ -263,4 +263,9 @@ public class AdminService : IAdminService
 
     await _auditService.LogActionAsync("SERVICE_DEACTIVATED", "ServiceCategory", adminId, "ADMIN", serviceId, null, null);
   }
+
+  public async Task<List<Entities.ServiceCategory>> GetAllServicesAsync()
+  {
+    return await _db.ServiceCategories.ToListAsync();
+  }
 }

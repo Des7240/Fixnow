@@ -27,4 +27,5 @@ public interface IAdminService
   Task<Entities.ServiceCategory> CreateServiceAsync(DTOs.Admin.CreateServiceRequestDto request, Guid adminId);
   Task<Entities.ServiceCategory> UpdateServiceAsync(Guid serviceId, DTOs.Admin.UpdateServiceRequestDto request, Guid adminId);
   Task DeleteServiceAsync(Guid serviceId, Guid adminId);
+  Task<List<Entities.ServiceCategory>> GetAllServicesAsync();
 }

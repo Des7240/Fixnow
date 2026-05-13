@@ -165,6 +165,13 @@ public class AdminController : ControllerBase
     return NoContent();
   }
 
+  [HttpGet("services")]
+  public async Task<IActionResult> GetAllServices()
+  {
+    var result = await _adminService.GetAllServicesAsync();
+    return Ok(result);
+  }
+
   [HttpPost("services")]
   public async Task<IActionResult> CreateService([FromBody] CreateServiceRequestDto request)
   {

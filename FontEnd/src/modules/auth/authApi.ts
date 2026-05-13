@@ -53,4 +53,7 @@ export const authApi = {
 
   refreshToken: () =>
     axiosInstance.post<{ accessToken: string }>('/auth/refresh'),
+
+  updateProfile: (data: { fullName: string; phoneNumber?: string; avatarUrl?: string }) =>
+    axiosInstance.put<AuthResponse>('/auth/profile', data),
 };

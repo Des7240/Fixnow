@@ -3,7 +3,6 @@ import { Table, Button, message, Modal, Input, InputNumber, Tabs, Tag, Space, Sw
 import { Plus, Settings, ListTree, Activity, Database, Edit, Trash2, Percent, Coins } from 'lucide-react';
 import { adminApi } from '../../modules/admin/adminApi';
 import type { SystemConfig, ServiceCommission } from '../../modules/admin/adminApi';
-import axiosInstance from '../../utils/axiosInstance';
 
 export default function AdminSettings() {
   const [services, setServices] = useState<any[]>([]);
@@ -187,22 +186,38 @@ export default function AdminSettings() {
   ];
 
   const commissionColumns = [
-    { title: 'Dịch vụ', dataIndex: ['service', 'name'], key: 'service' },
-    { title: 'Hoa hồng (%)', dataIndex: 'commissionPercent', key: 'percent', render: (val: number) => <Tag color="blue" className="font-bold">{val} %</Tag> },
+    { title: 'Dịch vụ', dataIndex: 'name', key: 'service' },
+    { 
+      title: 'Hoa hồng (%)', 
+      key: 'percent', 
+      render: (_: any, record: any) => {
+        const commission = commissions.find(c => c.serviceId === record.id);
+        const percent = commission ? commission.commissionPercent : 10;
+        return (
+          <Space>
+            <Tag color={commission ? "blue" : "default"} className="font-bold">{percent} %</Tag>
+            {!commission && <Tag color="orange" className="text-[10px]">Mặc định</Tag>}
+          </Space>
+        );
+      }
+    },
     { 
       title: 'Thao tác', 
       key: 'action', 
-      render: (_: any, record: ServiceCommission) => (
-        <Button 
-          type="link" 
-          icon={<Percent className="w-4 h-4" />} 
-          onClick={() => {
-            setEditingCommission(record);
-            setCommissionPercent(record.commissionPercent);
-            setIsCommissionModalOpen(true);
-          }}
-        > Thay đổi</Button>
-      )
+      render: (_: any, record: any) => {
+        const commission = commissions.find(c => c.serviceId === record.id);
+        return (
+          <Button 
+            type="link" 
+            icon={<Percent className="w-4 h-4" />} 
+            onClick={() => {
+              setEditingCommission(commission || { serviceId: record.id, service: record, commissionPercent: 10 } as any);
+              setCommissionPercent(commission ? commission.commissionPercent : 10);
+              setIsCommissionModalOpen(true);
+            }}
+          > {commission ? 'Thay đổi' : 'Thiết lập'}</Button>
+        );
+      }
     },
   ];
 
@@ -242,7 +257,7 @@ export default function AdminSettings() {
                     <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-gray-800">
                         <Percent className="w-5 h-5 text-blue-500" /> Phí hoa hồng theo dịch vụ
                     </h3>
-                    <Table columns={commissionColumns} dataSource={commissions} rowKey="id" pagination={{ pageSize: 5 }} size="middle" />
+                    <Table columns={commissionColumns} dataSource={services} rowKey="id" pagination={{ pageSize: 5 }} size="middle" />
                     <p className="text-xs text-gray-400 mt-2 italic">* Các dịch vụ chưa có trong danh sách sẽ áp dụng mức mặc định 10%.</p>
                   </div>
                 </div>

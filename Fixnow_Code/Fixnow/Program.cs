@@ -145,9 +145,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
-var allowedOrigins = builder.Configuration
-  .GetSection("Cors:AllowedOrigins")
-  .Get<string[]>() ?? Array.Empty<string>();
+var corsSettings = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+// Support comma-separated string from environment variable "Cors__AllowedOrigins"
+var rawCors = builder.Configuration["Cors:AllowedOrigins"];
+var allowedOrigins = !string.IsNullOrEmpty(rawCors) && rawCors.Contains(",") 
+    ? rawCors.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(o => o.Trim()).ToArray()
+    : corsSettings;
 
 builder.Services.AddCors(options =>
 {
@@ -156,7 +159,7 @@ builder.Services.AddCors(options =>
     policy.WithOrigins(allowedOrigins)
           .AllowAnyHeader()
           .AllowAnyMethod()
-          .AllowCredentials(); // Required for cookies
+          .AllowCredentials(); 
   });
 });
 
@@ -340,49 +343,9 @@ app.UseMiddleware<ExceptionMiddleware>();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 
-app.UseRateLimiter();
-
-// Automatically apply migrations on startup
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    try
-    {
-        var context = services.GetRequiredService<AppDbContext>();
-        Log.Information("Applying pending migrations...");
-        context.Database.Migrate();
-        Log.Information("Database migrations applied successfully.");
-    }
-    catch (Exception ex)
-    {
-        Log.Error(ex, "An error occurred while migrating the database.");
-    }
-}
-
-// Request logging via Serilog
-app.UseSerilogRequestLogging(options =>
-{
-  // Attach correlation ID to the request log
-  options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
-  {
-    if (httpContext.Request.Headers.TryGetValue("X-Correlation-ID", out var correlationId))
-    {
-      diagnosticContext.Set("CorrelationId", correlationId);
-    }
-  };
-});
-
-if (app.Environment.IsDevelopment())
-{
-  app.UseSwagger();
-  app.UseSwaggerUI(options =>
-  {
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "FixNow API v1");
-    options.RoutePrefix = "swagger";
-  });
-}
-
 app.UseCors();
+
+app.UseRateLimiter();
 
 if (app.Environment.IsProduction())
 {
