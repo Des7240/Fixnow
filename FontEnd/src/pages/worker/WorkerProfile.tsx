@@ -25,7 +25,7 @@ export default function WorkerProfile() {
   const [availableServices, setAvailableServices] = useState<{id: string, name: string, iconUrl?: string}[]>([]);
   const [ratingSummary, setRatingSummary] = useState({ averageRating: 0, totalReviews: 0 });
   const [reviews, setReviews] = useState<Review[]>([]);
-  const { register, handleSubmit, setValue } = useForm();
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm();
 
   // Password Modal
   const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
@@ -196,11 +196,18 @@ export default function WorkerProfile() {
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Số điện thoại <span className="text-red-500">*</span></label>
                 <input
-                  {...register('phoneNumber', { required: 'Số điện thoại là bắt buộc' })}
+                  {...register('phoneNumber', { 
+                    required: 'Số điện thoại là bắt buộc',
+                    pattern: {
+                      value: /^(0[3|5|7|8|9])+([0-9]{8})$/,
+                      message: 'Số điện thoại Việt Nam không hợp lệ'
+                    }
+                  })}
                   type="tel"
                   className="w-full bg-gray-50 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/50"
                   placeholder="Ví dụ: 0987654321"
                 />
+                {errors.phoneNumber && <p className="text-red-500 text-[10px] mt-1 ml-1">{(errors.phoneNumber as any).message}</p>}
               </div>
 
               <div>

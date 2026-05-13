@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, MapPin, Wrench, Clock, FileText, Navigation, Loader2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Wrench, Clock, FileText, Navigation, Loader2, Home } from 'lucide-react';
 import { message } from 'antd';
 import axiosInstance from '../../utils/axiosInstance';
 
 const bookingSchema = z.object({
   serviceId: z.string().min(1, 'Vui lòng chọn dịch vụ'),
   address: z.string().min(5, 'Địa chỉ chi tiết không được để trống'),
+  detailAddress: z.string().min(1, 'Vui lòng nhập số nhà, tầng, phòng...'),
   lat: z.number(),
   lng: z.number(),
   description: z.string().optional(),
@@ -25,6 +26,9 @@ interface Service {
 
 export default function CreateBooking() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialServiceId = searchParams.get('serviceId');
+  
   const [loading, setLoading] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [locating, setLocating] = useState(false);
@@ -33,7 +37,10 @@ export default function CreateBooking() {
     resolver: zodResolver(bookingSchema),
     defaultValues: {
       lat: 21.0285,
-      lng: 105.8048
+      lng: 105.8048,
+      serviceId: initialServiceId || '',
+      address: '',
+      detailAddress: ''
     }
   });
 
@@ -43,12 +50,17 @@ export default function CreateBooking() {
       try {
         const res = await axiosInstance.get('/services');
         setServices(res.data);
+        
+        // If initialServiceId is provided, set it
+        if (initialServiceId) {
+          setValue('serviceId', initialServiceId, { shouldValidate: true });
+        }
       } catch (err) {
         console.error('Failed to fetch services', err);
       }
     };
     fetchServices();
-  }, []);
+  }, [initialServiceId, setValue]);
 
   const handleGetCurrentLocation = () => {
     setLocating(true);
@@ -93,7 +105,11 @@ export default function CreateBooking() {
   const onSubmit = async (data: BookingForm) => {
     setLoading(true);
     try {
-      await axiosInstance.post('/bookings', data);
+      const fullAddress = `${data.detailAddress}, ${data.address}`;
+      await axiosInstance.post('/bookings', {
+        ...data,
+        address: fullAddress
+      });
       message.success('Đặt thợ thành công! Đang tìm thợ gần bạn...');
       navigate('/customer/bookings');
     } catch (err: any) {
@@ -134,7 +150,7 @@ export default function CreateBooking() {
                       : 'border-gray-100 bg-gray-50 hover:border-gray-200'
                   }`}
                 >
-                  <span className="text-xl">{srv.iconUrl ? <img src={srv.iconUrl} alt={srv.name} className="w-6 h-6 rounded-full" /> : '⚡'}</span>
+                  <span className="text-xl">{srv.iconUrl && srv.iconUrl.length < 5 ? srv.iconUrl : '⚡'}</span>
                   <span className="text-sm font-semibold text-gray-700">{srv.name}</span>
                 </div>
               ))}
@@ -158,16 +174,29 @@ export default function CreateBooking() {
                 {locating ? <Loader2 className="w-3 h-3 animate-spin"/> : <Navigation className="w-3 h-3" />} Lấy vị trí
               </button>
             </div>
-            <textarea
-              {...register('address')}
-              placeholder="Nhập số nhà, ngõ, tên đường..."
-              rows={3}
-              className="w-full bg-gray-50 rounded-2xl border-none px-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-orange-500/50 resize-none"
-            />
-            {errors.address && <p className="text-red-500 text-xs mt-2 ml-1">{errors.address.message}</p>}
+
+            <div className="space-y-3">
+                <div className="relative">
+                    <Home className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                    <input
+                        {...register('detailAddress')}
+                        placeholder="Số nhà, tầng, tên tòa nhà..."
+                        className="w-full bg-gray-50 rounded-xl border-none pl-10 pr-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-orange-500/50"
+                    />
+                </div>
+                {errors.detailAddress && <p className="text-red-500 text-xs mt-1 ml-1">{errors.detailAddress.message}</p>}
+
+                <textarea
+                    {...register('address')}
+                    placeholder="Phường/Xã, Quận/Huyện, Thành phố (Tự động hoặc nhập tay)..."
+                    rows={2}
+                    className="w-full bg-gray-50 rounded-xl border-none px-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-orange-500/50 resize-none"
+                />
+                {errors.address && <p className="text-red-500 text-xs mt-1 ml-1">{errors.address.message}</p>}
+            </div>
             
             <div className="mt-3 flex items-center justify-between p-3 bg-blue-50 text-blue-700 rounded-xl text-xs font-medium">
-              <span>Định vị GPS đã được bật tự động</span>
+              <span>Định vị GPS hỗ trợ tìm thợ gần nhất</span>
               <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
             </div>
           </div>

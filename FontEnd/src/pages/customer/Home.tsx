@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { MapPin, Search, Wrench, Bell, User } from 'lucide-react';
+import axiosInstance from '../../utils/axiosInstance';
 
 // Fix leaflet icon path issue
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -13,18 +14,17 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Mock services for MVP
-const SERVICES = [
-  { id: '1', name: 'Sửa điện', icon: '⚡' },
-  { id: '2', name: 'Sửa nước', icon: '💧' },
-  { id: '3', name: 'Sửa điều hoà', icon: '❄️' },
-  { id: '4', name: 'Sửa khoá', icon: '🔑' },
+// Mock fallback services if database is empty
+const MOCK_SERVICES = [
+  { id: '1', name: 'Sửa điện', iconUrl: '⚡' },
+  { id: '2', name: 'Sửa nước', iconUrl: '💧' },
 ];
 
 export default function CustomerHome() {
   const navigate = useNavigate();
   const [position, setPosition] = useState<[number, number]>([21.028511, 105.804817]); // Default Hanoi
   const [selectedService, setSelectedService] = useState<string | null>(null);
+  const [services, setServices] = useState<any[]>([]);
 
   useEffect(() => {
     // Get user's actual location
@@ -34,6 +34,18 @@ export default function CustomerHome() {
         (err) => console.warn('Geolocation error:', err)
       );
     }
+
+    // Fetch real services from database
+    const fetchServices = async () => {
+      try {
+        const res = await axiosInstance.get('/services');
+        setServices(res.data.length > 0 ? res.data : MOCK_SERVICES);
+      } catch (err) {
+        console.error('Failed to fetch services', err);
+        setServices(MOCK_SERVICES);
+      }
+    };
+    fetchServices();
   }, []);
 
   return (
@@ -88,7 +100,7 @@ export default function CustomerHome() {
         <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6"></div>
         <h3 className="text-xl font-bold text-gray-900 mb-4">Dịch vụ nổi bật</h3>
         <div className="grid grid-cols-4 gap-4 mb-6">
-          {SERVICES.map((srv) => (
+          {services.map((srv) => (
             <button
               key={srv.id}
               onClick={() => setSelectedService(srv.id)}
@@ -98,15 +110,15 @@ export default function CustomerHome() {
                   : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
               }`}
             >
-              <span className="text-2xl">{srv.icon}</span>
-              <span className="text-xs font-semibold text-gray-700 whitespace-nowrap">{srv.name}</span>
+              <span className="text-2xl">{srv.iconUrl && srv.iconUrl.length < 5 ? srv.iconUrl : '⚡'}</span>
+              <span className="text-[10px] font-bold text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis w-full px-1">{srv.name}</span>
             </button>
           ))}
         </div>
 
         <div className="flex gap-3 mb-6">
           <button 
-            onClick={() => navigate('/customer/booking/create')}
+            onClick={() => navigate(`/customer/booking/create?serviceId=${selectedService}`)}
             className="flex-1 py-4 bg-gray-900 hover:bg-black text-white font-bold rounded-2xl shadow-lg shadow-gray-900/30 flex items-center justify-center gap-2 disabled:opacity-50"
             disabled={!selectedService}
           >
@@ -114,7 +126,7 @@ export default function CustomerHome() {
             Đặt thợ ngay
           </button>
           <button 
-            onClick={() => navigate('/customer/open-job/create')}
+            onClick={() => navigate(`/customer/open-job/create?serviceId=${selectedService}`)}
             className="flex-1 py-4 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl shadow-lg shadow-orange-500/30 flex items-center justify-center gap-2"
           >
             <Search className="w-5 h-5" />

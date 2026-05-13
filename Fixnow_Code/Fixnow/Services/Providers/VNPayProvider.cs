@@ -6,6 +6,9 @@ using Fixnow.Services.Interfaces;
 
 namespace Fixnow.Services.Providers;
 
+/// <summary>
+/// VNPay payment provider implementation.
+/// </summary>
 public class VNPayProvider : IPaymentProvider
 {
   public string ProviderName => "VNPAY";
@@ -17,6 +20,7 @@ public class VNPayProvider : IPaymentProvider
     _config = config;
   }
 
+  /// <inheritdoc/>
   public Task<string> CreatePaymentUrlAsync(PaymentRequestDto request)
   {
     var tmnCode = _config["VNPay:TmnCode"] ?? "4YUP19I4";
@@ -46,11 +50,10 @@ public class VNPayProvider : IPaymentProvider
     {
       if (!string.IsNullOrEmpty(kv.Value))
       {
-        var encodedKey = WebUtility.UrlEncode(kv.Key);
-        var encodedValue = WebUtility.UrlEncode(kv.Value);
-
+        // VNPay 2.1.0 requires RFC 3986 encoding (spaces as %20)
+        var encodedValue = Uri.EscapeDataString(kv.Value);
         hashData.Append(kv.Key + "=" + encodedValue + "&");
-        queryPath.Append(encodedKey + "=" + encodedValue + "&");
+        queryPath.Append(Uri.EscapeDataString(kv.Key) + "=" + encodedValue + "&");
       }
     }
 
@@ -61,6 +64,7 @@ public class VNPayProvider : IPaymentProvider
     return Task.FromResult(paymentUrl);
   }
 
+  /// <inheritdoc/>
   public Task<PaymentResultDto> VerifyCallbackAsync(IQueryCollection query)
   {
     var hashSecret = _config["VNPay:HashSecret"] ?? "MDUIFDCRAKLNBPOFIAFNEKFRNMFBYEPX";
@@ -79,16 +83,14 @@ public class VNPayProvider : IPaymentProvider
     {
       if (!string.IsNullOrEmpty(kv.Value))
       {
-        // IMPORTANT: Match Java's URLEncoder.encode behavior in VnpayReturn.java
-        // encode values before hashing
-        sb.Append(kv.Key + "=" + WebUtility.UrlEncode(kv.Value) + "&");
+        // VNPay 2.1.0 requires RFC 3986 encoding for signature verification
+        sb.Append(kv.Key + "=" + Uri.EscapeDataString(kv.Value) + "&");
       }
     }
     var signData = sb.ToString().TrimEnd('&');
     var checkSignature = HmacSHA512(hashSecret, signData);
 
     var vnp_SecureHash = query["vnp_SecureHash"].ToString();
-    var txnRef = query["vnp_TxnRef"].ToString();
     var transactionNo = query["vnp_TransactionNo"].ToString();
     var amountStr = query["vnp_Amount"].ToString();
     var responseCode = query["vnp_ResponseCode"].ToString();

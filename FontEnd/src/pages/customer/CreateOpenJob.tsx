@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, MapPin, Wrench, Clock, FileText, Navigation, Loader2, Upload, X, Shield, DollarSign, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, MapPin, Wrench, Clock, FileText, Navigation, Loader2, Upload, X, Shield, DollarSign, Home } from 'lucide-react';
 import { message, Select, InputNumber } from 'antd';
 import axiosInstance from '../../utils/axiosInstance';
 import { API_BASE_URL } from '../../utils/constants';
@@ -13,6 +13,7 @@ const openJobSchema = z.object({
   title: z.string().min(5, 'Tiêu đề ít nhất 5 ký tự'),
   description: z.string().min(10, 'Mô tả chi tiết tình trạng để thợ dễ báo giá'),
   address: z.string().min(5, 'Địa chỉ không được để trống'),
+  detailAddress: z.string().min(1, 'Vui lòng nhập số nhà, tầng, phòng...'),
   lat: z.number(),
   lng: z.number(),
   radiusKm: z.number().min(1).max(50),
@@ -31,6 +32,9 @@ interface Service {
 
 export default function CreateOpenJob() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialServiceId = searchParams.get('serviceId');
+
   const [loading, setLoading] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [locating, setLocating] = useState(false);
@@ -43,7 +47,10 @@ export default function CreateOpenJob() {
     defaultValues: {
       lat: 21.0285,
       lng: 105.8048,
-      radiusKm: 5
+      radiusKm: 5,
+      serviceId: initialServiceId || '',
+      address: '',
+      detailAddress: ''
     }
   });
 
@@ -52,12 +59,15 @@ export default function CreateOpenJob() {
       try {
         const res = await axiosInstance.get('/services');
         setServices(res.data);
+        if (initialServiceId) {
+          setValue('serviceId', initialServiceId, { shouldValidate: true });
+        }
       } catch (err) {
         console.error('Failed to fetch services', err);
       }
     };
     fetchServices();
-  }, []);
+  }, [initialServiceId, setValue]);
 
   const handleGetCurrentLocation = () => {
     setLocating(true);
@@ -101,14 +111,7 @@ export default function CreateOpenJob() {
     if (!files || files.length === 0) return;
 
     setUploading(true);
-    const formData = new FormData();
-    for (let i = 0; i < files.length; i++) {
-        formData.append('file', files[i]);
-    }
-
     try {
-      // Assuming a bulk upload endpoint or single upload loop
-      // For simplicity, we loop single upload if backend doesn't support bulk
       const newFileIds = [...fileIds];
       const newPreviewUrls = [...previewUrls];
 
@@ -143,9 +146,14 @@ export default function CreateOpenJob() {
   const onSubmit = async (data: OpenJobForm) => {
     setLoading(true);
     try {
-      await axiosInstance.post('/open-jobs', { ...data, fileIds });
+      const fullAddress = `${data.detailAddress}, ${data.address}`;
+      await axiosInstance.post('/open-jobs', { 
+        ...data, 
+        address: fullAddress,
+        fileIds 
+      });
       message.success('Đăng bài thành công! Thợ gần bạn sẽ sớm gửi báo giá.');
-      navigate('/customer/home'); // Or to a dedicated Open Jobs list
+      navigate('/customer/home');
     } catch (err: any) {
       const errorMsg = err?.response?.data?.message || 'Có lỗi xảy ra khi đăng bài';
       message.error(errorMsg);
@@ -166,7 +174,6 @@ export default function CreateOpenJob() {
       <div className="flex-1 overflow-y-auto p-4">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-md mx-auto pb-24">
           
-          {/* Service Selection */}
           <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
             <div className="flex items-center gap-2 mb-4 text-gray-900 font-bold">
               <Wrench className="w-5 h-5 text-orange-500" />
@@ -188,9 +195,9 @@ export default function CreateOpenJob() {
                 </div>
               ))}
             </div>
+            {errors.serviceId && <p className="text-red-500 text-xs mt-2 ml-1">{errors.serviceId.message}</p>}
           </div>
 
-          {/* Title & Description */}
           <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
             <div className="flex items-center gap-2 mb-4 text-gray-900 font-bold">
               <FileText className="w-5 h-5 text-orange-500" />
@@ -217,7 +224,6 @@ export default function CreateOpenJob() {
             </div>
           </div>
 
-          {/* Attachments */}
           <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
             <div className="flex items-center gap-2 mb-4 text-gray-900 font-bold">
               <Upload className="w-5 h-5 text-orange-500" />
@@ -250,7 +256,6 @@ export default function CreateOpenJob() {
             </div>}
           </div>
 
-          {/* Budget & Urgency */}
           <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 space-y-4">
             <div className="flex items-center gap-2 mb-2 text-gray-900 font-bold">
               <DollarSign className="w-5 h-5 text-orange-500" />
@@ -296,7 +301,6 @@ export default function CreateOpenJob() {
             </div>
           </div>
 
-          {/* Radius & Location */}
           <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2 text-gray-900 font-bold">
@@ -328,12 +332,25 @@ export default function CreateOpenJob() {
                 />
             </div>
 
-            <textarea
-              {...register('address')}
-              placeholder="Địa chỉ sửa chữa..."
-              rows={2}
-              className="w-full bg-gray-50 rounded-xl border-none px-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-orange-500/50 resize-none"
-            />
+            <div className="space-y-3">
+                <div className="relative">
+                    <Home className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                    <input
+                        {...register('detailAddress')}
+                        placeholder="Số nhà, tầng, tên tòa nhà..."
+                        className="w-full bg-gray-50 rounded-xl border-none pl-10 pr-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-orange-500/50"
+                    />
+                </div>
+                {errors.detailAddress && <p className="text-red-500 text-xs mt-1 ml-1">{errors.detailAddress.message}</p>}
+
+                <textarea
+                    {...register('address')}
+                    placeholder="Phường/Xã, Quận/Huyện, Thành phố (Tự động hoặc nhập tay)..."
+                    rows={2}
+                    className="w-full bg-gray-50 rounded-xl border-none px-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-orange-500/50 resize-none"
+                />
+                {errors.address && <p className="text-red-500 text-xs mt-1 ml-1">{errors.address.message}</p>}
+            </div>
           </div>
 
           <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl text-blue-800">
