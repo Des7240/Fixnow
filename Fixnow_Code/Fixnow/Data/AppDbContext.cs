@@ -32,6 +32,10 @@ public class AppDbContext : DbContext
   public DbSet<Notification> Notifications => Set<Notification>();
   public DbSet<WorkerRatingSummary> WorkerRatingSummaries => Set<WorkerRatingSummary>();
 
+  // Marketing DbSets
+  public DbSet<Promotion> Promotions => Set<Promotion>();
+  public DbSet<UserPromotionUsage> UserPromotionUsages => Set<UserPromotionUsage>();
+
   // P2 DbSets
   public DbSet<UploadedFile> UploadedFiles => Set<UploadedFile>();
   public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
@@ -185,6 +189,11 @@ public class AppDbContext : DbContext
       entity.HasOne(b => b.OpenJob)
         .WithMany()
         .HasForeignKey(b => b.OpenJobId)
+        .OnDelete(DeleteBehavior.SetNull);
+
+      entity.HasOne(b => b.Promotion)
+        .WithMany()
+        .HasForeignKey(b => b.PromotionId)
         .OnDelete(DeleteBehavior.SetNull);
     });
 
@@ -659,6 +668,38 @@ public class AppDbContext : DbContext
             .WithMany()
             .HasForeignKey(r => r.ProcessedBy)
             .OnDelete(DeleteBehavior.Restrict);
+    });
+
+    // ── Promotion ──────────────────────────────────────────────────────────────
+    modelBuilder.Entity<Promotion>(entity =>
+    {
+      entity.ToTable("promotions");
+      entity.HasKey(p => p.Id);
+      entity.HasIndex(p => p.Code).IsUnique();
+      entity.Property(p => p.DiscountType).HasConversion<string>().HasMaxLength(50);
+      
+      entity.HasOne(p => p.ApplicableService)
+            .WithMany()
+            .HasForeignKey(p => p.ApplicableServiceId)
+            .OnDelete(DeleteBehavior.SetNull);
+    });
+
+    // ── UserPromotionUsage ──────────────────────────────────────────────────────
+    modelBuilder.Entity<UserPromotionUsage>(entity =>
+    {
+      entity.ToTable("user_promotion_usages");
+      entity.HasKey(u => u.Id);
+      entity.HasIndex(u => new { u.UserId, u.PromotionId });
+
+      entity.HasOne(u => u.User)
+            .WithMany()
+            .HasForeignKey(u => u.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+      entity.HasOne(u => u.Promotion)
+            .WithMany()
+            .HasForeignKey(u => u.PromotionId)
+            .OnDelete(DeleteBehavior.Cascade);
     });
   }
 }

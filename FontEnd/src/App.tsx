@@ -51,6 +51,7 @@ import AdminMarketplace from './pages/admin/AdminMarketplace';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminWorkerServices from './pages/admin/AdminWorkerServices';
 import UsersManagement from './pages/admin/UsersManagement';
+import AdminPromotions from './pages/admin/AdminPromotions';
 
 function App() {
   const { connection } = useSignalR();
@@ -133,6 +134,7 @@ function App() {
             <Route path="/admin/users" element={<UsersManagement />} />
             <Route path="/admin/kyc" element={<AdminKYC />} />
             <Route path="/admin/skills" element={<AdminWorkerServices />} />
+            <Route path="/admin/promotions" element={<AdminPromotions />} />
             <Route path="/admin/disputes" element={<DisputeManagement />} />
             <Route path="/admin/disputes/:id" element={<AdminDisputeDetail />} />
             <Route path="/admin/settings" element={<AdminSettings />} />

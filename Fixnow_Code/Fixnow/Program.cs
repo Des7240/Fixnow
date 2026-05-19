@@ -202,6 +202,8 @@ builder.Services.AddScoped<INotificationInboxService, NotificationInboxService>(
 builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IQuotationService, QuotationService>();
+builder.Services.AddScoped<IPromotionService, PromotionService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 // Register Payment Providers
@@ -224,8 +226,10 @@ builder.Services.AddScoped<IOpenJobService, OpenJobService>();
 builder.Services.AddScoped<IWalletRepository, WalletRepository>();
 builder.Services.AddScoped<IWalletTransactionRepository, WalletTransactionRepository>();
 builder.Services.AddScoped<IWithdrawalRepository, WithdrawalRepository>();
+builder.Services.AddScoped<IPromotionRepository, PromotionRepository>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 
+// Register Repositories P4 Dispute
 builder.Services.AddScoped<IDisputeRepository, DisputeRepository>();
 builder.Services.AddScoped<IRefundRepository, RefundRepository>();
 builder.Services.AddScoped<IDisputeService, DisputeService>();

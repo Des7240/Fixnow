@@ -15,19 +15,22 @@ public class AdminService : IAdminService
   private readonly IWorkerServiceRepository _workerServiceRepo;
   private readonly AppDbContext _db;
   private readonly IAuditService _auditService;
+  private readonly INotificationService _notificationService;
 
   public AdminService(
     IWorkerKycRepository kycRepo, 
     IUserRepository userRepo, 
     IWorkerServiceRepository workerServiceRepo,
     AppDbContext db, 
-    IAuditService auditService)
+    IAuditService auditService,
+    INotificationService notificationService)
   {
     _kycRepo = kycRepo;
     _userRepo = userRepo;
     _workerServiceRepo = workerServiceRepo;
     _db = db;
     _auditService = auditService;
+    _notificationService = notificationService;
   }
 
   public async Task<List<KycResponseDto>> GetAllKycsAsync()
@@ -44,7 +47,8 @@ public class AdminService : IAdminService
       WorkerName = k.Worker?.FullName,
       CitizenFrontUrl = k.CitizenFrontUrl,
       CitizenBackUrl = k.CitizenBackUrl,
-      SelfieUrl = k.SelfieUrl
+      SelfieUrl = k.SelfieUrl,
+      CertificateUrl = k.CertificateUrl
     }).ToList();
   }
 
@@ -93,6 +97,9 @@ public class AdminService : IAdminService
     var actionType = request.Status == KycStatus.APPROVED ? "KYC_APPROVED" : "KYC_REJECTED";
     await _auditService.LogActionAsync(actionType, "WorkerKyc", adminId, "ADMIN", kycId, null, $"{{ \"reason\": \"{request.Reason}\" }}");
 
+    // Send notification to worker
+    await _notificationService.NotifyWorkerKycStatusAsync(kyc.WorkerId, request.Status.ToString(), request.Reason);
+
     return new KycResponseDto
     {
       Id = kyc.Id,
@@ -100,7 +107,8 @@ public class AdminService : IAdminService
       Status = kyc.Status.ToString(),
       RejectionReason = kyc.RejectionReason,
       SubmittedAt = kyc.SubmittedAt,
-      VerifiedAt = kyc.VerifiedAt
+      VerifiedAt = kyc.VerifiedAt,
+      CertificateUrl = kyc.CertificateUrl
     };
   }
 

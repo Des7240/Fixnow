@@ -25,6 +25,10 @@ public class Booking
   
   public decimal? TotalAmount { get; set; } // Set when quote is approved
   
+  // Marketing & Voucher
+  public Guid? PromotionId { get; set; }
+  public decimal DiscountAmount { get; set; } = 0;
+  
   public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
   public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
@@ -35,6 +39,7 @@ public class Booking
   public User? Worker { get; set; }
   public ServiceCategory Service { get; set; } = null!;
   public OpenJob? OpenJob { get; set; }
+  public Promotion? Promotion { get; set; }
   public ICollection<BookingStatusHistory> StatusHistories { get; set; } = new List<BookingStatusHistory>();
   public ICollection<BookingMatchingLog> MatchingLogs { get; set; } = new List<BookingMatchingLog>();
   public BookingFinancial? Financial { get; set; }

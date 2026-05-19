@@ -38,4 +38,7 @@ public interface INotificationService
 
   /// <summary>Notifies a customer that their job has been moderated by an admin.</summary>
   Task NotifyCustomerJobModeratedAsync(Guid customerId, Guid jobId, string title, string status, string? reason);
+
+  /// <summary>Notifies a worker about their KYC review status.</summary>
+  Task NotifyWorkerKycStatusAsync(Guid workerId, string status, string? reason);
 }

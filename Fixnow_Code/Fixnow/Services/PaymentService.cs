@@ -46,9 +46,13 @@ public class PaymentService : IPaymentService
     if (booking.PaymentStatus == BookingPaymentStatus.PAID)
       throw new InvalidOperationException("Booking is already PAID.");
 
-    var amount = booking.TotalAmount ?? 0;
-    if (amount <= 0)
+    var baseAmount = booking.TotalAmount ?? 0;
+    if (baseAmount <= 0)
       throw new InvalidOperationException("Invalid booking amount. Quotation might not be approved.");
+
+    var discountAmount = booking.DiscountAmount;
+    var amountToPay = baseAmount - discountAmount;
+    if (amountToPay < 0) amountToPay = 0;
 
     var provider = _providers.FirstOrDefault(p => p.ProviderName.Equals(request.Provider.ToString(), StringComparison.InvariantCultureIgnoreCase))
       ?? throw new NotSupportedException($"Provider {request.Provider} not supported.");
@@ -58,7 +62,7 @@ public class PaymentService : IPaymentService
       BookingId = booking.Id,
       CustomerId = customerId,
       Provider = request.Provider,
-      Amount = amount,
+      Amount = amountToPay,
       Status = PaymentStatus.PENDING,
       Type = PaymentType.BOOKING
     };
@@ -73,7 +77,7 @@ public class PaymentService : IPaymentService
     {
       PaymentId = payment.Id,
       BookingId = booking.Id,
-      Amount = amount,
+      Amount = amountToPay,
       Description = $"Payment for booking {booking.Id}",
       ReturnUrl = returnUrl,
       IpAddress = ipAddress
@@ -81,7 +85,7 @@ public class PaymentService : IPaymentService
 
     var paymentUrl = await provider.CreatePaymentUrlAsync(paymentRequest);
 
-    await _auditService.LogActionAsync("PAYMENT_CREATED", "Payment", customerId, "CUSTOMER", payment.Id, null, $"{{ \"amount\": {amount}, \"provider\": \"{request.Provider}\" }}");
+    await _auditService.LogActionAsync("PAYMENT_CREATED", "Payment", customerId, "CUSTOMER", payment.Id, null, $"{{ \"amount\": {amountToPay}, \"provider\": \"{request.Provider}\" }}");
 
     return new CreatePaymentResponseDto
     {
@@ -182,13 +186,16 @@ public class PaymentService : IPaymentService
           booking.PaymentStatus = BookingPaymentStatus.PAID;
           await _bookingRepo.UpdateAsync(booking);
 
-          var platformFee = payment.Amount * 0.1m;
-          var workerIncome = payment.Amount - platformFee;
+          // Worker income is calculated based on the original TotalAmount, not the discounted Payment Amount.
+          // Because Admin (Fixnow) sponsors the voucher discount.
+          var baseAmount = booking.TotalAmount ?? 0;
+          var platformFee = baseAmount * 0.1m;
+          var workerIncome = baseAmount - platformFee;
 
           var financial = new BookingFinancial
           {
             BookingId = booking.Id,
-            TotalAmount = payment.Amount,
+            TotalAmount = payment.Amount, // Customer paid amount
             PlatformFee = platformFee,
             WorkerIncome = workerIncome
           };

@@ -339,4 +339,35 @@ public class NotificationService : INotificationService
       Reason = reason
     });
   }
+
+  /// <inheritdoc/>
+  public Task NotifyWorkerKycStatusAsync(Guid workerId, string status, string? reason)
+  {
+    _backgroundJobClient.Enqueue(() => DoNotifyWorkerKycStatusAsync(workerId, status, reason));
+    return Task.CompletedTask;
+  }
+
+  [AutomaticRetry(Attempts = 3)]
+  public async Task DoNotifyWorkerKycStatusAsync(Guid workerId, string status, string? reason)
+  {
+    string message = status == "APPROVED"
+      ? "Hồ sơ KYC của bạn đã được phê duyệt. Bạn đã có thể bắt đầu nhận việc!"
+      : $"Hồ sơ KYC của bạn đã bị từ chối. Lý do: {reason}";
+
+    await _notificationRepo.AddAsync(new Notification
+    {
+      UserId = workerId,
+      Title = status == "APPROVED" ? "Hồ sơ KYC được phê duyệt" : "Hồ sơ KYC bị từ chối",
+      Content = message,
+      Type = "KYC_STATUS_UPDATE",
+      ReferenceId = workerId
+    });
+
+    await _hubContext.Clients.User(workerId.ToString()).SendAsync("ReceiveNotification", new
+    {
+      Type = "KYC_STATUS_UPDATE",
+      Message = message,
+      Status = status
+    });
+  }
 }

@@ -37,6 +37,7 @@ interface Booking {
     name: string;
   };
   quotations: any[];
+  totalAmount?: number;
 }
 
 export default function BookingDetail() {
@@ -58,6 +59,13 @@ export default function BookingDetail() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<'VNPAY' | 'MOMO'>('VNPAY');
   const [paymentAction, setPaymentAction] = useState<'APPROVE' | 'DIRECT'>('APPROVE');
+
+  // Promo Code State
+  const [promoCode, setPromoCode] = useState('');
+  const [promoDiscount, setPromoDiscount] = useState<number>(0);
+  const [promoError, setPromoError] = useState('');
+  const [validatingPromo, setValidatingPromo] = useState(false);
+  const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -134,10 +142,24 @@ export default function BookingDetail() {
     } finally {
       setActionLoading(false);
     }
-  };
+    };
 
-  const handleReviewSubmit = async () => {
-    setSubmittingReview(true);
+    const handleFinishWork = () => {
+    Modal.confirm({
+      title: 'Hoàn thành công việc',
+      content: 'Bạn có muốn cập nhật lại báo giá cuối cùng dựa trên thực tế sửa chữa không? Nếu có, khách hàng sẽ duyệt lại báo giá trước khi thanh toán.',
+      okText: 'Cập nhật báo giá',
+      cancelText: 'Hoàn thành ngay',
+      onOk: () => {
+        navigate(`/worker/bookings/${id}/quotation/create`);
+      },
+      onCancel: () => {
+        updateStatus('COMPLETED');
+      }
+    });
+    };
+
+    const handleReviewSubmit = async () => {    setSubmittingReview(true);
     try {
       await axiosInstance.post('/reviews', {
         bookingId: id,
@@ -163,6 +185,37 @@ export default function BookingDetail() {
     setIsPaymentModalOpen(true);
   };
 
+  const handleValidatePromo = async () => {
+    if (!promoCode.trim()) return;
+    
+    const pendingQuote = booking?.quotations?.find((q: any) => q.status === 'PENDING' || q.status === 'APPROVED');
+    const orderValue = pendingQuote?.totalAmount || booking?.totalAmount || 0;
+
+    setValidatingPromo(true);
+    setPromoError('');
+    try {
+      const res = await axiosInstance.post('/promotions/validate', {
+        code: promoCode,
+        orderValue: orderValue,
+        serviceId: booking?.service.id
+      });
+      
+      if (res.data.isValid) {
+        setPromoDiscount(res.data.discountAmount);
+        setAppliedPromo(promoCode);
+        message.success('Áp dụng mã khuyến mãi thành công!');
+      } else {
+        setPromoError(res.data.errorMessage);
+        setAppliedPromo(null);
+        setPromoDiscount(0);
+      }
+    } catch (error) {
+      setPromoError('Có lỗi xảy ra khi kiểm tra mã khuyến mãi');
+    } finally {
+      setValidatingPromo(false);
+    }
+  };
+
   const executePayment = async () => {
     setActionLoading(true);
     setIsPaymentModalOpen(false);
@@ -174,7 +227,7 @@ export default function BookingDetail() {
           message.error('Không tìm thấy báo giá đang chờ duyệt');
           return;
         }
-        await axiosInstance.post(`/quotations/${quotationId}/approve`);
+        await axiosInstance.post(`/quotations/${quotationId}/approve`, { promoCode: appliedPromo || null });
       }
 
       const endpoint = selectedProvider === 'VNPAY' ? '/payments/vnpay' : '/payments/momo';
@@ -424,7 +477,7 @@ export default function BookingDetail() {
                 )}
                 {currentStatus === 'WORKING' && (
                   <button 
-                    onClick={() => updateStatus('COMPLETED')}
+                    onClick={handleFinishWork}
                     disabled={actionLoading}
                     className="w-full py-4 bg-green-500 hover:bg-green-600 text-white font-bold rounded-2xl shadow-xl shadow-green-500/20 transition-all"
                   >
@@ -552,7 +605,60 @@ export default function BookingDetail() {
           <p className="text-gray-500 text-sm text-center mb-6">
             Vui lòng chọn phương thức thanh toán để tiếp tục
           </p>
-          
+
+          {activeQuotation && (
+            <div className="bg-gray-50 p-4 rounded-2xl mb-4 border border-gray-100">
+               <div className="flex justify-between text-sm mb-2">
+                 <span className="text-gray-600">Tổng tiền báo giá:</span>
+                 <span className="font-bold">{activeQuotation.totalAmount.toLocaleString('vi-VN')} đ</span>
+               </div>
+               {appliedPromo && (
+                 <div className="flex justify-between text-sm mb-2 text-green-600">
+                   <span>Giảm giá (Mã {appliedPromo}):</span>
+                   <span className="font-bold">-{promoDiscount.toLocaleString('vi-VN')} đ</span>
+                 </div>
+               )}
+               <div className="flex justify-between text-lg mt-3 pt-3 border-t border-gray-200">
+                 <span className="font-bold text-gray-900">Cần thanh toán:</span>
+                 <span className="font-black text-orange-600">
+                    {Math.max(0, activeQuotation.totalAmount - promoDiscount).toLocaleString('vi-VN')} đ
+                 </span>
+               </div>
+            </div>
+          )}
+
+          {isCustomer && (paymentAction === 'APPROVE' || paymentAction === 'DIRECT') && (
+            <div className="mb-4">
+               <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Mã Khuyến Mãi (Nếu có)</label>
+               <div className="flex gap-2">
+                 <Input 
+                   value={promoCode} 
+                   onChange={(e) => setPromoCode(e.target.value.toUpperCase())} 
+                   disabled={!!appliedPromo}
+                   placeholder="Nhập mã voucher" 
+                   className="uppercase rounded-xl"
+                 />
+                 {!appliedPromo ? (
+                    <button 
+                      onClick={handleValidatePromo} 
+                      disabled={validatingPromo || !promoCode}
+                      className="px-4 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-black disabled:opacity-50 whitespace-nowrap"
+                    >
+                      {validatingPromo ? 'Đang kiểm tra...' : 'Áp dụng'}
+                    </button>
+                 ) : (
+                    <button 
+                      onClick={() => { setAppliedPromo(null); setPromoDiscount(0); setPromoCode(''); }}
+                      className="px-4 bg-red-100 text-red-600 rounded-xl text-sm font-bold hover:bg-red-200 whitespace-nowrap"
+                    >
+                      Xóa
+                    </button>
+                 )}
+               </div>
+               {promoError && <p className="text-xs text-red-500 mt-1">{promoError}</p>}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-3">
             <button
               onClick={() => setSelectedProvider('VNPAY')}

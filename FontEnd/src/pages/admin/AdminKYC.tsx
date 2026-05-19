@@ -167,6 +167,22 @@ export default function AdminKYC() {
                   />
                 </div>
               </div>
+              <div className="col-span-2">
+                <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 text-center">Bằng cấp / Giấy phép kinh doanh</p>
+                {selectedKyc.certificateUrl ? (
+                  <div className="rounded-2xl overflow-hidden border border-gray-100 bg-gray-50 w-full max-w-md mx-auto h-48">
+                    <img 
+                      src={getImageUrl(selectedKyc.certificateUrl)} 
+                      alt="Certificate" 
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-gray-100 border-dashed bg-gray-50 w-full max-w-md mx-auto h-16 flex items-center justify-center">
+                    <p className="text-gray-400 text-sm">Không có (Tùy chọn)</p>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 mt-6">
@@ -218,10 +234,9 @@ export default function AdminKYC() {
                   </div>
                 </>
               ) : (
-                <div className={clsx(
-                  "p-4 rounded-2xl text-center font-bold",
+                <div className={`p-4 rounded-2xl text-center font-bold ${
                   selectedKyc.status === 'APPROVED' ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
-                )}>
+                }`}>
                   Hồ sơ đã được {selectedKyc.status === 'APPROVED' ? 'DUYỆT' : 'TỪ CHỐI'} 
                   {selectedKyc.rejectionReason && <p className="text-sm font-medium mt-1">Lý do: {selectedKyc.rejectionReason}</p>}
                 </div>

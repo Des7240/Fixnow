@@ -16,4 +16,5 @@ public class KycResponseDto
   public string? CitizenFrontUrl { get; set; }
   public string? CitizenBackUrl { get; set; }
   public string? SelfieUrl { get; set; }
+  public string? CertificateUrl { get; set; }
 }

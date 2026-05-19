@@ -42,9 +42,10 @@ public class QuotationController : ControllerBase
   }
 
   [HttpPost("{id}/approve")]
-  public async Task<IActionResult> ApproveQuotation(Guid id)
+  public async Task<IActionResult> ApproveQuotation(Guid id, [FromBody] ApproveQuotationRequestDto? request = null)
   {
-    var result = await _quotationService.ApproveQuotationAsync(id, CurrentUserId);
+    var promoCode = request?.PromoCode;
+    var result = await _quotationService.ApproveQuotationAsync(id, CurrentUserId, promoCode);
     return Ok(result);
   }
 

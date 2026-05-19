@@ -23,6 +23,14 @@ interface Offer {
 interface OpenJob {
   id: string;
   title: string;
+  description: string;
+  address: string;
+  serviceName: string;
+  createdAt: string;
+  fileUrls: string[];
+  minBudget?: number;
+  maxBudget?: number;
+  urgencyLevel?: string;
   status: string;
 }
 
@@ -33,6 +41,7 @@ export default function ViewOffers() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [job, setJob] = useState<OpenJob | null>(null);
   const [selecting, setSelecting] = useState<string | null>(null);
+  const [showJobDetails, setShowJobDetails] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -102,14 +111,22 @@ export default function ViewOffers() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <div className="bg-white px-4 py-4 flex items-center gap-4 shadow-sm sticky top-0 z-20">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-gray-100">
-          <ArrowLeft className="w-6 h-6 text-gray-700" />
-        </button>
-        <div>
-            <h1 className="text-lg font-bold text-gray-900">Danh sách báo giá</h1>
-            <p className="text-xs text-gray-500 font-medium line-clamp-1">{job?.title}</p>
+      <div className="bg-white px-4 py-4 flex items-center justify-between shadow-sm sticky top-0 z-20">
+        <div className="flex items-center gap-4">
+          <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-gray-100">
+            <ArrowLeft className="w-6 h-6 text-gray-700" />
+          </button>
+          <div>
+              <h1 className="text-lg font-bold text-gray-900">Danh sách báo giá</h1>
+              <p className="text-xs text-gray-500 font-medium line-clamp-1">{job?.title}</p>
+          </div>
         </div>
+        <button 
+          onClick={() => setShowJobDetails(true)}
+          className="p-2 bg-gray-50 rounded-xl text-gray-600 hover:bg-gray-100 transition-colors"
+        >
+          <FileText className="w-5 h-5" />
+        </button>
       </div>
 
       <div className="flex-1 p-4 space-y-4">
@@ -128,7 +145,10 @@ export default function ViewOffers() {
                     <div key={offer.id} className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
                         <div className="p-5">
                             <div className="flex justify-between items-start mb-4">
-                                <div className="flex items-center gap-3">
+                                <div 
+                                    className="flex items-center gap-3 cursor-pointer"
+                                    onClick={() => navigate(`/worker-profile/${offer.workerId}`)}
+                                >
                                     <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center overflow-hidden">
                                         {offer.workerAvatar ? (
                                             <img src={`${API_BASE_URL}${offer.workerAvatar}`} alt="avatar" className="w-full h-full object-cover" />
@@ -217,6 +237,71 @@ export default function ViewOffers() {
             </div>
         )}
       </div>
+
+      {/* Job Details Modal */}
+      <Modal
+        title="Chi tiết bài đăng"
+        open={showJobDetails}
+        onCancel={() => setShowJobDetails(false)}
+        footer={null}
+        width={500}
+        centered
+        className="rounded-3xl overflow-hidden"
+      >
+        {job && (
+          <div className="space-y-6 py-2">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="bg-orange-100 text-orange-600 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
+                  {job.serviceName}
+                </span>
+                <span className="text-xs text-gray-400">
+                  {new Date(job.createdAt).toLocaleString()}
+                </span>
+              </div>
+              <h2 className="text-lg font-bold text-gray-900">{job.title}</h2>
+            </div>
+
+            <div className="bg-gray-50 p-4 rounded-2xl space-y-3">
+              <div className="flex items-start gap-3 text-gray-600">
+                <MapPin className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                <span className="text-sm">{job.address}</span>
+              </div>
+              <div className="flex items-center gap-3 text-gray-600">
+                <DollarSign className="w-4 h-4 text-orange-500 flex-shrink-0" />
+                <span className="text-sm font-bold">
+                   Ngân sách: {job.minBudget?.toLocaleString()}đ - {job.maxBudget?.toLocaleString()}đ
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-orange-500" /> Mô tả chi tiết
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
+                {job.description}
+              </p>
+            </div>
+
+            {job.fileUrls && job.fileUrls.length > 0 && (
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 mb-3">Hình ảnh đính kèm</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {job.fileUrls.map((url, i) => (
+                    <img 
+                      key={i} 
+                      src={`${API_BASE_URL}${url}`} 
+                      alt="attachment" 
+                      className="w-full aspect-video object-cover rounded-xl"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

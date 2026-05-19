@@ -17,8 +17,8 @@ const openJobSchema = z.object({
   lat: z.number(),
   lng: z.number(),
   radiusKm: z.number().min(1).max(50),
-  minBudget: z.number().optional(),
-  maxBudget: z.number().optional(),
+  minBudget: z.number().min(0, 'Giá không được âm').optional(),
+  maxBudget: z.number().min(0, 'Giá không được âm').optional(),
   urgencyLevel: z.string().optional(),
 });
 
@@ -268,8 +268,10 @@ export default function CreateOpenJob() {
                     <InputNumber
                         style={{ width: '100%' }}
                         placeholder="Min"
+                        min={0}
                         onChange={(val) => setValue('minBudget', val as number)}
-                        formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\n))/g, ',')}
+                        formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                        parser={(value) => value!.replace(/\$\s?|(,*)/g, '')}
                         className="rounded-xl border-gray-100 bg-gray-50 font-bold"
                     />
                 </div>
@@ -278,8 +280,10 @@ export default function CreateOpenJob() {
                     <InputNumber
                         style={{ width: '100%' }}
                         placeholder="Max"
+                        min={0}
                         onChange={(val) => setValue('maxBudget', val as number)}
-                        formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\n))/g, ',')}
+                        formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                        parser={(value) => value!.replace(/\$\s?|(,*)/g, '')}
                         className="rounded-xl border-gray-100 bg-gray-50 font-bold"
                     />
                 </div>

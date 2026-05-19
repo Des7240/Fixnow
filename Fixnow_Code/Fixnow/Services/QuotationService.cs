@@ -16,6 +16,7 @@ public class QuotationService : IQuotationService
   private readonly IAuditService _auditService;
   private readonly IBookingStatusHistoryRepository _historyRepo;
   private readonly INotificationRepository _notificationRepo;
+  private readonly IPromotionService _promotionService;
 
   public QuotationService(
     IQuotationRepository quotationRepo,
@@ -24,7 +25,8 @@ public class QuotationService : IQuotationService
     IBackgroundJobClient backgroundJobClient,
     IAuditService auditService,
     IBookingStatusHistoryRepository historyRepo,
-    INotificationRepository notificationRepo)
+    INotificationRepository notificationRepo,
+    IPromotionService promotionService)
   {
     _quotationRepo = quotationRepo;
     _bookingRepo = bookingRepo;
@@ -33,6 +35,7 @@ public class QuotationService : IQuotationService
     _auditService = auditService;
     _historyRepo = historyRepo;
     _notificationRepo = notificationRepo;
+    _promotionService = promotionService;
   }
 
   public async Task<QuotationDto> CreateQuotationAsync(CreateQuotationRequestDto request, Guid workerId)
@@ -43,7 +46,7 @@ public class QuotationService : IQuotationService
     if (booking.WorkerId != workerId)
       throw new UnauthorizedAccessException("You are not the assigned worker for this booking.");
 
-    if (booking.Status != BookingStatus.ASSIGNED && booking.Status != BookingStatus.INSPECTING && booking.Status != BookingStatus.QUOTED)
+    if (booking.Status != BookingStatus.ASSIGNED && booking.Status != BookingStatus.INSPECTING && booking.Status != BookingStatus.QUOTED && booking.Status != BookingStatus.WORKING)
       throw new InvalidOperationException($"Cannot create quotation in current booking status: {booking.Status}");
 
     // If there is an existing PENDING quote, maybe reject it or throw error. We'll allow multiple for now or just expire old ones.
@@ -129,7 +132,7 @@ public class QuotationService : IQuotationService
     return quotations.Select(MapToDto).ToList();
   }
 
-  public async Task<QuotationDto> ApproveQuotationAsync(Guid quotationId, Guid customerId)
+  public async Task<QuotationDto> ApproveQuotationAsync(Guid quotationId, Guid customerId, string? promoCode = null)
   {
     var quotation = await _quotationRepo.FindByIdWithDetailsAsync(quotationId)
       ?? throw new KeyNotFoundException("Quotation not found.");
@@ -151,8 +154,34 @@ public class QuotationService : IQuotationService
     if (booking.Status != BookingStatus.QUOTED && booking.Status != BookingStatus.WORKING)
       throw new InvalidOperationException($"Cannot approve quotation for booking in status {booking.Status}");
 
-    booking.TotalAmount = quotation.TotalAmount;
-    if (booking.Status != BookingStatus.WORKING)
+    // Xử lý Voucher / Promotion
+    decimal discountAmount = 0;
+    Guid? promotionId = null;
+
+    if (!string.IsNullOrEmpty(promoCode))
+    {
+      var validateResult = await _promotionService.ValidatePromotionAsync(new Fixnow.DTOs.Promotion.ValidatePromotionDto
+      {
+        Code = promoCode,
+        OrderValue = quotation.TotalAmount,
+        ServiceId = booking.ServiceId
+      });
+
+      if (!validateResult.IsValid)
+        throw new InvalidOperationException($"Mã khuyến mãi không hợp lệ: {validateResult.ErrorMessage}");
+
+      discountAmount = validateResult.DiscountAmount;
+      promotionId = validateResult.PromotionId;
+      
+      // Áp dụng lượt dùng (tăng count, lưu log)
+      await _promotionService.ApplyPromotionUsageAsync(promotionId.Value, customerId);
+    }
+
+    booking.TotalAmount = quotation.TotalAmount; // Giá gốc để Worker thấy
+    booking.PromotionId = promotionId;
+    booking.DiscountAmount = discountAmount;
+
+    if (booking.Status != BookingStatus.WORKING && booking.Status != BookingStatus.COMPLETED)
     {
       booking.Status = BookingStatus.WORKING;
       await _bookingRepo.UpdateAsync(booking);
@@ -167,8 +196,18 @@ public class QuotationService : IQuotationService
     }
     else
     {
-      // Just update TotalAmount if already WORKING
+      // If it was already WORKING, approving a new quote means work is finished and price is agreed
+      var targetStatus = BookingStatus.COMPLETED;
+      booking.Status = targetStatus;
       await _bookingRepo.UpdateAsync(booking);
+
+      await _historyRepo.AddAsync(new BookingStatusHistory
+      {
+        BookingId = booking.Id,
+        OldStatus = oldStatus,
+        NewStatus = targetStatus,
+        UpdatedBy = customerId
+      });
     }
 
     // Notify Worker

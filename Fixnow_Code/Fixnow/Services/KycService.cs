@@ -84,7 +84,8 @@ public class KycService : IKycService
       Status = kyc.Status.ToString(),
       RejectionReason = kyc.RejectionReason,
       SubmittedAt = kyc.SubmittedAt,
-      VerifiedAt = kyc.VerifiedAt
+      VerifiedAt = kyc.VerifiedAt,
+      CertificateUrl = kyc.CertificateUrl
     };
   }
 }

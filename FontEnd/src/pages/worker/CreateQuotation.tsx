@@ -10,10 +10,10 @@ export default function CreateQuotation() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(false);
-  const [items, setItems] = useState([{ name: '', quantity: 1, unitPrice: 0 }]);
+  const [items, setItems] = useState([{ itemName: '', quantity: 1, unitPrice: 0 }]);
 
   const addItem = () => {
-    setItems([...items, { name: '', quantity: 1, unitPrice: 0 }]);
+    setItems([...items, { itemName: '', quantity: 1, unitPrice: 0 }]);
   };
 
   const removeItem = (index: number) => {
@@ -31,7 +31,7 @@ export default function CreateQuotation() {
   };
 
   const submitQuotation = async () => {
-    if (items.length === 0 || items.some(i => !i.name || i.unitPrice <= 0)) {
+    if (items.length === 0 || items.some(i => !i.itemName || i.unitPrice <= 0)) {
       message.error('Vui lòng điền đầy đủ tên và đơn giá hợp lệ cho các hạng mục');
       return;
     }
@@ -75,8 +75,8 @@ export default function CreateQuotation() {
             <input
               placeholder="Tên hạng mục (vd: Thay vòi nước)"
               className="w-full mb-3 p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-orange-500/50 text-sm"
-              value={item.name}
-              onChange={(e) => handleChange(idx, 'name', e.target.value)}
+              value={item.itemName}
+              onChange={(e) => handleChange(idx, 'itemName', e.target.value)}
             />
             <div className="flex gap-3">
               <div className="flex-1">
