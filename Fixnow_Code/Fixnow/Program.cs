@@ -398,6 +398,22 @@ if (args.Length > 0 && args[0] == "seed")
     // await SeedData.Initialize(app.Services);
 }
 
+// Auto apply migrations on startup (for Render Cloud)
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        Log.Information("Applying database migrations...");
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Database.Migrate();
+        Log.Information("Database migrations applied successfully.");
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Failed to apply database migrations.");
+    }
+}
+
 Log.Information("Calling app.Run()...");
 if (Environment.GetEnvironmentVariable("ASPNETCORE_URLS") != null || Environment.GetEnvironmentVariable("PORT") != null)
 {
