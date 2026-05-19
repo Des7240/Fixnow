@@ -82,6 +82,22 @@ export default function NotificationsList() {
         return;
       }
 
+      if (notification.type === 'KYC_APPROVED' || notification.type === 'KYC_REJECTED') {
+        navigate(`/worker/kyc`);
+        return;
+      }
+
+      if (notification.type === 'SKILL_APPROVED' || notification.type === 'SKILL_REJECTED') {
+        navigate(`/worker/profile`);
+        return;
+      }
+
+      if (notification.type === 'DISPUTE_CREATED' || notification.type === 'DISPUTE_RESOLVED') {
+        const prefix = user?.role?.toUpperCase() === 'ADMIN' ? '/admin' : user?.role?.toUpperCase() === 'WORKER' ? '/worker/bookings' : '/customer/bookings';
+        navigate(`${prefix}/${notification.referenceId}/dispute`);
+        return;
+      }
+
       const rolePrefix = user?.role?.toUpperCase() === 'WORKER' ? '/worker' : '/customer';
       navigate(`${rolePrefix}/bookings/${notification.referenceId}`);
     }
