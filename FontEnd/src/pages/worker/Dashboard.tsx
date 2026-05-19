@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../stores/authStore';
-import { Switch, message } from 'antd';
+import { Switch, message, Modal } from 'antd';
 import { Power, MapPin, Briefcase, Search } from 'lucide-react';
 import axiosInstance from '../../utils/axiosInstance';
 import { clsx } from 'clsx';
@@ -14,6 +14,7 @@ export default function WorkerDashboard() {
   const [isOnline, setIsOnline] = useState(false);
   const [locationUpdateActive, setLocationUpdateActive] = useState(false);
   const [newJob, setNewJob] = useState<any>(null);
+  const [kycStatus, setKycStatus] = useState<string>('NOT_SUBMITTED');
 
   useEffect(() => {
     // Fetch initial profile to check status
@@ -27,7 +28,18 @@ export default function WorkerDashboard() {
         console.log('Chưa có profile, vui lòng tạo profile trước');
       }
     };
+
+    const fetchKyc = async () => {
+      try {
+        const res = await axiosInstance.get('/workers/kyc');
+        setKycStatus(res.data?.status || 'NOT_SUBMITTED');
+      } catch (err) {
+        setKycStatus('NOT_SUBMITTED');
+      }
+    };
+
     fetchProfile();
+    fetchKyc();
   }, []);
 
   const updateLocation = async () => {
@@ -108,6 +120,18 @@ export default function WorkerDashboard() {
   }, [isOnline]);
 
   const handleStatusChange = async (checked: boolean) => {
+    if (checked && kycStatus !== 'APPROVED') {
+      Modal.confirm({
+        title: 'Yêu cầu định danh (KYC)',
+        content: 'Bạn cần hoàn tất hồ sơ định danh và chờ phê duyệt để có thể bật chế độ Online nhận việc.',
+        okText: 'Đi tới KYC',
+        cancelText: 'Đóng',
+        centered: true,
+        onOk: () => navigate('/worker/kyc'),
+      });
+      return;
+    }
+
     try {
       const status = checked ? 'ONLINE' : 'OFFLINE';
       await axiosInstance.patch('/workers/profile/availability', { status });
