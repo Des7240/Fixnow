@@ -42,13 +42,19 @@ export default function WorkerKYC() {
     }
 
     setLoading(true);
+    
+    const getFile = (files: UploadFile[]) => {
+      const file: any = files[0];
+      return file.originFileObj || file;
+    };
+
     const formData = new FormData();
     formData.append('CitizenIdNumber', data.citizenIdNumber);
-    formData.append('FrontImage', frontImage[0].originFileObj as Blob);
-    formData.append('BackImage', backImage[0].originFileObj as Blob);
-    formData.append('SelfieImage', selfieImage[0].originFileObj as Blob);
+    formData.append('FrontImage', getFile(frontImage) as Blob);
+    formData.append('BackImage', getFile(backImage) as Blob);
+    formData.append('SelfieImage', getFile(selfieImage) as Blob);
     if (certificateImage.length > 0) {
-      formData.append('CertificateFile', certificateImage[0].originFileObj as Blob);
+      formData.append('CertificateFile', getFile(certificateImage) as Blob);
     }
 
     try {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { User, Briefcase, Wrench, Save, Star, MessageSquare, LogOut, Lock, Shield } from 'lucide-react';
+import { User, Briefcase, Wrench, Save, Star, MessageSquare, LogOut, Lock, Shield, FileBadge, ChevronRight } from 'lucide-react';
 import { message, Modal, Form, Input } from 'antd';
 import axiosInstance from '../../utils/axiosInstance';
 import { useAuthStore } from '../../stores/authStore';
@@ -302,7 +302,23 @@ export default function WorkerProfile() {
                 <p className="text-xs text-gray-500">Cập nhật mật khẩu bảo vệ tài khoản</p>
               </div>
             </div>
-            <Lock size={18} className="text-gray-400" />
+            <ChevronRight size={18} className="text-gray-400" />
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 mt-4 cursor-pointer hover:bg-gray-50 transition-colors"
+             onClick={() => navigate('/worker/kyc')}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                <FileBadge size={20} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-gray-900">Hồ sơ định danh (KYC)</p>
+                <p className="text-xs text-gray-500">Cập nhật giấy tờ tùy thân, bằng cấp để nhận việc</p>
+              </div>
+            </div>
+            <ChevronRight size={18} className="text-gray-400" />
           </div>
         </div>
 
