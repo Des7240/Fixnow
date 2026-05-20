@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Star, Clock, DollarSign, CheckCircle, Loader2, Wrench, User, ChevronRight, Shield } from 'lucide-react';
+import { ArrowLeft, Star, Clock, DollarSign, CheckCircle, Loader2, Wrench, User, ChevronRight, Shield, FileText, MapPin } from 'lucide-react';
 import { message, Modal, Badge } from 'antd';
 import axiosInstance from '../../utils/axiosInstance';
 import { API_BASE_URL } from '../../utils/constants';

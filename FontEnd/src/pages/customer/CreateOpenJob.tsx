@@ -153,7 +153,7 @@ export default function CreateOpenJob() {
         fileIds 
       });
       message.success('Đăng bài thành công! Thợ gần bạn sẽ sớm gửi báo giá.');
-      navigate('/customer/home');
+      navigate('/customer/open-jobs');
     } catch (err: any) {
       const errorMsg = err?.response?.data?.message || 'Có lỗi xảy ra khi đăng bài';
       message.error(errorMsg);

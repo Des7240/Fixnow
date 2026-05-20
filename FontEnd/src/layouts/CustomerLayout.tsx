@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Home, ListOrdered, Bell, User, Briefcase } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useNotificationStore } from '../stores/notificationStore';
+import { AISupportWidget } from '../components/AISupportWidget';
 
 export default function CustomerLayout() {
   const navigate = useNavigate();
@@ -27,6 +28,8 @@ export default function CustomerLayout() {
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         <Outlet />
       </div>
+      
+      <AISupportWidget />
 
       {/* Bottom Navigation */}
       <div className="bg-white border-t border-gray-100 px-6 py-3 pb-safe shadow-[0_-5px_20px_rgba(0,0,0,0.03)] z-50">

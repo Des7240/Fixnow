@@ -234,6 +234,8 @@ builder.Services.AddScoped<IDisputeRepository, DisputeRepository>();
 builder.Services.AddScoped<IRefundRepository, RefundRepository>();
 builder.Services.AddScoped<IDisputeService, DisputeService>();
 
+builder.Services.AddHttpClient<IGeminiService, GeminiService>();
+
 builder.Services.AddSignalR();
 
 // ─── Hangfire ─────────────────────────────────────────────────────────────────
