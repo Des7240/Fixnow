@@ -243,7 +243,7 @@ public class PaymentService : IPaymentService
     
     // We assume the payload contains the PaymentId in the "content" field without hyphens.
     // Let's try to extract 32 hex chars from content.
-    var match = System.Text.RegularExpressions.Regex.Match(payload.Content, @"[a-fA-F0-9]{32}");
+    var match = System.Text.RegularExpressions.Regex.Match(payload.Content ?? "", @"[a-fA-F0-9]{32}");
     if (!match.Success)
     {
       var failedResult = new PaymentResultDto { IsSuccess = false, RawResponse = rawResponse, ErrorMessage = "No PaymentId found in content" };
