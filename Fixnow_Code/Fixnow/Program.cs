@@ -209,6 +209,7 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 // Register Payment Providers
 builder.Services.AddScoped<IPaymentProvider, VNPayProvider>();
 builder.Services.AddScoped<IPaymentProvider, MoMoProvider>();
+builder.Services.AddScoped<IPaymentProvider, SePayProvider>();
 
 builder.Services.AddScoped<IConversationRepository, ConversationRepository>();
 builder.Services.AddScoped<IMessageRepository, MessageRepository>();

@@ -230,4 +230,102 @@ public class PaymentService : IPaymentService
     await _paymentRepo.AddCallbackAsync(callback);
     await _auditService.LogActionAsync("PAYMENT_CALLBACK_RECEIVED", "PaymentCallback", null, "SYSTEM", callback.Id, null, result.RawResponse);
   }
+
+  public async Task<PaymentResultDto> ProcessSePayWebhookAsync(SePayWebhookDto payload)
+  {
+    var rawResponse = System.Text.Json.JsonSerializer.Serialize(payload);
+    
+    // We assume the payload contains the PaymentId in the "content" field without hyphens.
+    // Let's try to extract 32 hex chars from content.
+    var match = System.Text.RegularExpressions.Regex.Match(payload.Content, @"[a-fA-F0-9]{32}");
+    if (!match.Success)
+    {
+      var failedResult = new PaymentResultDto { IsSuccess = false, RawResponse = rawResponse, ErrorMessage = "No PaymentId found in content" };
+      await LogCallbackRawAsync("SEPAY", failedResult, false);
+      return failedResult;
+    }
+
+    var paymentIdStr = match.Value;
+    if (!Guid.TryParseExact(paymentIdStr, "N", out var paymentId))
+    {
+      var failedResult = new PaymentResultDto { IsSuccess = false, RawResponse = rawResponse, ErrorMessage = "Invalid PaymentId format" };
+      await LogCallbackRawAsync("SEPAY", failedResult, false);
+      return failedResult;
+    }
+
+    var payment = await _paymentRepo.FindByIdWithDetailsAsync(paymentId);
+    if (payment == null)
+    {
+      var failedResult = new PaymentResultDto { IsSuccess = false, RawResponse = rawResponse, ErrorMessage = "Payment not found" };
+      await LogCallbackRawAsync("SEPAY", failedResult, false);
+      return failedResult;
+    }
+
+    // Amount check (optional depending on business logic, here we just check if it's equal or greater)
+    if (payload.TransferAmount < payment.Amount)
+    {
+      var failedResult = new PaymentResultDto { IsSuccess = false, RawResponse = rawResponse, ErrorMessage = "Transferred amount is less than expected" };
+      await LogCallbackRawAsync("SEPAY", failedResult, true);
+      return failedResult;
+    }
+
+    var result = new PaymentResultDto
+    {
+      IsSuccess = true,
+      TransactionId = payload.ReferenceCode,
+      RawResponse = rawResponse,
+      Amount = payload.TransferAmount
+    };
+
+    await LogCallbackRawAsync("SEPAY", result, true);
+
+    if (payment.Status == PaymentStatus.SUCCESS || payment.Status == PaymentStatus.FAILED)
+      return result;
+
+    var transaction = new Transaction
+    {
+      PaymentId = payment.Id,
+      GatewayTransactionId = result.TransactionId,
+      ProviderResponse = result.RawResponse,
+      Status = PaymentStatus.SUCCESS
+    };
+    await _paymentRepo.AddTransactionAsync(transaction);
+
+    payment.Status = PaymentStatus.SUCCESS;
+    payment.TransactionCode = result.TransactionId;
+    await _paymentRepo.UpdateAsync(payment);
+
+    if (payment.Type == PaymentType.BOOKING && payment.BookingId.HasValue)
+    {
+      var booking = await _bookingRepo.FindByIdAsync(payment.BookingId.Value);
+      if (booking != null)
+      {
+        booking.PaymentStatus = BookingPaymentStatus.PAID;
+        await _bookingRepo.UpdateAsync(booking);
+
+        var baseAmount = booking.TotalAmount ?? 0;
+        var platformFee = baseAmount * 0.1m;
+        var workerIncome = baseAmount - platformFee;
+
+        var financial = new BookingFinancial
+        {
+          BookingId = booking.Id,
+          TotalAmount = payment.Amount,
+          PlatformFee = platformFee,
+          WorkerIncome = workerIncome
+        };
+        await _paymentRepo.CreateFinancialAsync(financial);
+
+        await _walletService.ProcessBookingIncomeAsync(booking.Id);
+      }
+    }
+    else if (payment.Type == PaymentType.WALLET_DEPOSIT)
+    {
+      await _walletService.ProcessDepositAsync(payment.Id);
+    }
+
+    await _auditService.LogActionAsync("PAYMENT_SUCCESS", "Payment", null, "SYSTEM", payment.Id, null, $"{{ \"amount\": {payment.Amount}, \"type\": \"{payment.Type}\" }}");
+
+    return result;
+  }
 }

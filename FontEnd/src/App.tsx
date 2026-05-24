@@ -41,6 +41,7 @@ import PaymentReturn from './pages/shared/PaymentReturn';
 import ChatRoom from './pages/shared/ChatRoom';
 import PublicWorkerProfile from './pages/shared/PublicWorkerProfile';
 import CreateDispute from './pages/shared/CreateDispute';
+import SePayCheckout from './pages/shared/SePayCheckout';
 
 import AdminLayout from './layouts/AdminLayout';
 import AdminKYC from './pages/admin/AdminKYC';
@@ -87,6 +88,7 @@ function App() {
         <Route element={<ProtectedRoute allowedRoles={['CUSTOMER', 'WORKER']} />}>
           <Route path="/setup-password" element={<SetupPassword />} />
           <Route path="/payment/result" element={<PaymentReturn />} />
+          <Route path="/payment/sepay" element={<SePayCheckout />} />
           <Route path="/bookings/:id/chat" element={<ChatRoom />} />
           <Route path="/worker-profile/:id" element={<PublicWorkerProfile />} />
         </Route>

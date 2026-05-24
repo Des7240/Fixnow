@@ -21,5 +21,6 @@ public enum BookingPaymentStatus
 public enum PaymentProvider
 {
   VNPAY,
-  MOMO
+  MOMO,
+  SEPAY
 }

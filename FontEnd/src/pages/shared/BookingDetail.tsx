@@ -57,7 +57,7 @@ export default function BookingDetail() {
 
   // Payment Modal State
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<'VNPAY' | 'MOMO'>('VNPAY');
+  const [selectedProvider, setSelectedProvider] = useState<'VNPAY' | 'MOMO' | 'SEPAY'>('VNPAY');
   const [paymentAction, setPaymentAction] = useState<'APPROVE' | 'DIRECT'>('APPROVE');
 
   // Promo Code State
@@ -230,7 +230,7 @@ export default function BookingDetail() {
         await axiosInstance.post(`/quotations/${quotationId}/approve`, { promoCode: appliedPromo || null });
       }
 
-      const endpoint = selectedProvider === 'VNPAY' ? '/payments/vnpay' : '/payments/momo';
+      const endpoint = selectedProvider === 'VNPAY' ? '/payments/vnpay' : selectedProvider === 'MOMO' ? '/payments/momo' : '/payments/sepay';
       const paymentRes = await axiosInstance.post(endpoint, {
         bookingId: id,
         provider: selectedProvider
@@ -689,6 +689,22 @@ export default function BookingDetail() {
               <div>
                 <p className="font-bold text-gray-900">Ví MoMo</p>
                 <p className="text-xs text-gray-500">Thanh toán nhanh qua ví điện tử MoMo</p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setSelectedProvider('SEPAY')}
+              className={clsx(
+                "flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left",
+                selectedProvider === 'SEPAY' ? "border-blue-500 bg-blue-50" : "border-gray-100 hover:border-gray-200"
+              )}
+            >
+              <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center p-2">
+                <img src="https://sepay.vn/assets/img/logo.svg" alt="SePay" className="w-full h-auto object-contain" />
+              </div>
+              <div>
+                <p className="font-bold text-gray-900">VietQR (SePay)</p>
+                <p className="text-xs text-gray-500">Thanh toán bằng ứng dụng ngân hàng qua mã QR</p>
               </div>
             </button>
           </div>

@@ -41,7 +41,7 @@ export default function WalletDashboard() {
   // Deposit Modal
   const [isDepositOpen, setIsDepositOpen] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
-  const [selectedProvider, setSelectedProvider] = useState<'VNPAY' | 'MOMO'>('VNPAY');
+  const [selectedProvider, setSelectedProvider] = useState<'VNPAY' | 'MOMO' | 'SEPAY'>('VNPAY');
   const [depositing, setDepositing] = useState(false);
 
   useEffect(() => {
@@ -425,6 +425,9 @@ export default function WalletDashboard() {
                 </Radio.Button>
                 <Radio.Button value="MOMO" className="h-auto py-3 rounded-xl flex items-center gap-3">
                    Ví MoMo
+                </Radio.Button>
+                <Radio.Button value="SEPAY" className="h-auto py-3 rounded-xl flex items-center gap-3 text-blue-600">
+                   VietQR (Chuyển khoản)
                 </Radio.Button>
               </div>
             </Radio.Group>

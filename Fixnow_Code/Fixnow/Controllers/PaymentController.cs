@@ -60,4 +60,42 @@ public class PaymentController : ControllerBase
     var frontendUrl = _config["App:FrontendUrl"] ?? throw new InvalidOperationException("App:FrontendUrl is not configured.");
     return Redirect($"{frontendUrl}/payment/result?success={result.IsSuccess}&provider=momo");
   }
+
+  [HttpPost("sepay")]
+  [Authorize]
+  public async Task<IActionResult> CreateSePayPayment([FromBody] CreatePaymentRequestDto request)
+  {
+    request.Provider = Enums.PaymentProvider.SEPAY;
+    var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+    var result = await _paymentService.CreatePaymentAsync(request, CurrentUserId, ipAddress);
+    return Ok(result);
+  }
+
+  [HttpPost("sepay/webhook")]
+  [AllowAnonymous]
+  public async Task<IActionResult> SePayWebhook([FromBody] SePayWebhookDto payload)
+  {
+    var expectedToken = _config["SePay:WebhookToken"];
+    if (!string.IsNullOrEmpty(expectedToken) && expectedToken != "YOUR_SEPAY_WEBHOOK_TOKEN_HERE")
+    {
+      var authHeader = Request.Headers["Authorization"].FirstOrDefault();
+      if (string.IsNullOrEmpty(authHeader) || !authHeader.Contains(expectedToken))
+      {
+        return Unauthorized(new { success = false, message = "Invalid API Key" });
+      }
+    }
+
+    var result = await _paymentService.ProcessSePayWebhookAsync(payload);
+    
+    if (result.IsSuccess)
+    {
+      return Ok(new { success = true });
+    }
+    else
+    {
+      // SePay expects 200 OK with { success: true } even if we fail to process, to stop retrying.
+      // But we log it anyway.
+      return Ok(new { success = true, message = result.ErrorMessage });
+    }
+  }
 }
