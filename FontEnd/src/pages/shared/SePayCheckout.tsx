@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, Copy, ScanLine, AlertCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Copy, ScanLine, AlertCircle, Loader2 } from 'lucide-react';
 import { message } from 'antd';
+import api from '../../api/axios';
+import { useSignalR } from '../../signalr/SignalRContext';
 
 export default function SePayCheckout() {
   const [searchParams] = useSearchParams();
@@ -11,11 +13,14 @@ export default function SePayCheckout() {
   const amountStr = searchParams.get('amount');
   const des = searchParams.get('des');
   
+  const { connection, isConnected } = useSignalR();
+  
   // Lấy cấu hình từ Biến môi trường (Environment Variables)
   const bankAccount = import.meta.env.VITE_SEPAY_ACCOUNT_NUMBER || "0927319622";
   const bankName = import.meta.env.VITE_SEPAY_BANK_NAME || "MBBank";
   
   const [timeLeft, setTimeLeft] = useState(15 * 60); // 15 minutes
+  const [isChecking, setIsChecking] = useState(false);
 
   useEffect(() => {
     if (!paymentId || !amountStr || !des) {
@@ -23,6 +28,23 @@ export default function SePayCheckout() {
       navigate(-1);
     }
   }, [paymentId, amountStr, des, navigate]);
+
+  useEffect(() => {
+    if (connection && isConnected) {
+      const handlePaymentSuccess = (receivedPaymentId: string) => {
+        if (receivedPaymentId === paymentId) {
+          message.success({ content: 'Ting ting! Thanh toán thành công!', key: 'checkPayment', duration: 5 });
+          navigate(`/payment/result?success=true&provider=sepay&paymentId=${paymentId}`);
+        }
+      };
+
+      connection.on('ReceivePaymentSuccess', handlePaymentSuccess);
+
+      return () => {
+        connection.off('ReceivePaymentSuccess', handlePaymentSuccess);
+      };
+    }
+  }, [connection, isConnected, paymentId, navigate]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -53,10 +75,36 @@ export default function SePayCheckout() {
     message.success(`Đã sao chép ${label}`);
   };
 
-  const handlePaid = () => {
-    // We redirect to the result page with success=true and provider=sepay.
-    // In a real app, the result page should poll the backend to confirm if the webhook arrived.
-    navigate(`/payment/result?success=true&provider=sepay&paymentId=${paymentId}`);
+  const handlePaid = async () => {
+    if (isChecking) return;
+    setIsChecking(true);
+    let attempts = 0;
+    const maxAttempts = 5; // Thử 5 lần
+    
+    message.loading({ content: 'Đang kiểm tra giao dịch...', key: 'checkPayment' });
+
+    const checkStatus = async () => {
+      try {
+        const response = await api.get(`/v1/payments/${paymentId}/status`);
+        if (response.data.status === 2 || response.data.status === 'SUCCESS') {
+          message.success({ content: 'Thanh toán thành công!', key: 'checkPayment' });
+          navigate(`/payment/result?success=true&provider=sepay&paymentId=${paymentId}`);
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking payment status:', error);
+      }
+
+      attempts++;
+      if (attempts < maxAttempts) {
+        setTimeout(checkStatus, 3000); // Đợi 3s rồi kiểm tra lại
+      } else {
+        setIsChecking(false);
+        message.warning({ content: 'Chưa nhận được thanh toán. Vui lòng thử lại sau giây lát nếu bạn đã chuyển khoản.', key: 'checkPayment' });
+      }
+    };
+
+    checkStatus();
   };
 
   if (!paymentId) return null;
@@ -136,9 +184,11 @@ export default function SePayCheckout() {
             </p>
             <button
               onClick={handlePaid}
-              className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 transition-all"
+              disabled={isChecking}
+              className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold rounded-2xl shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 transition-all"
             >
-              <CheckCircle2 className="w-5 h-5" /> Tôi đã thanh toán
+              {isChecking ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
+              {isChecking ? 'Đang kiểm tra...' : 'Tôi đã thanh toán'}
             </button>
           </div>
         </div>

@@ -9,4 +9,5 @@ public interface IPaymentService
   Task<CreatePaymentResponseDto> CreateWalletDepositAsync(CreateWalletDepositRequestDto request, Guid userId, string ipAddress);
   Task<PaymentResultDto> ProcessCallbackAsync(string providerName, IQueryCollection query);
   Task<PaymentResultDto> ProcessSePayWebhookAsync(SePayWebhookDto payload);
+  Task<PaymentStatusResponseDto> GetPaymentStatusAsync(Guid paymentId, Guid currentUserId);
 }

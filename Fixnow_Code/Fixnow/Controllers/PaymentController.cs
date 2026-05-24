@@ -71,6 +71,14 @@ public class PaymentController : ControllerBase
     return Ok(result);
   }
 
+  [HttpGet("{id}/status")]
+  [Authorize]
+  public async Task<IActionResult> GetPaymentStatus(Guid id)
+  {
+    var result = await _paymentService.GetPaymentStatusAsync(id, CurrentUserId);
+    return Ok(result);
+  }
+
   [HttpPost("sepay/webhook")]
   [AllowAnonymous]
   public async Task<IActionResult> SePayWebhook([FromBody] SePayWebhookDto payload)

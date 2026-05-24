@@ -32,3 +32,8 @@ public class PaymentRequestDto
   public string ReturnUrl { get; set; } = string.Empty;
   public string IpAddress { get; set; } = string.Empty;
 }
+
+public class PaymentStatusResponseDto
+{
+  public PaymentStatus Status { get; set; }
+}

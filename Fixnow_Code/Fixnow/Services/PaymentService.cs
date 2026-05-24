@@ -4,6 +4,9 @@ using Fixnow.Entities;
 using Fixnow.Enums;
 using Fixnow.Repositories.Interfaces;
 using Fixnow.Services.Interfaces;
+using Fixnow.Hubs;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Configuration;
 
 namespace Fixnow.Services;
 
@@ -15,6 +18,7 @@ public class PaymentService : IPaymentService
   private readonly IConfiguration _config;
   private readonly IEnumerable<IPaymentProvider> _providers;
   private readonly IWalletService _walletService;
+  private readonly IHubContext<NotificationHub> _hubContext;
 
   public PaymentService(
     IPaymentRepository paymentRepo,
@@ -22,7 +26,8 @@ public class PaymentService : IPaymentService
     IAuditService auditService,
     IConfiguration config,
     IEnumerable<IPaymentProvider> providers,
-    IWalletService walletService)
+    IWalletService walletService,
+    IHubContext<NotificationHub> hubContext)
   {
     _paymentRepo = paymentRepo;
     _bookingRepo = bookingRepo;
@@ -30,6 +35,7 @@ public class PaymentService : IPaymentService
     _config = config;
     _providers = providers;
     _walletService = walletService;
+    _hubContext = hubContext;
   }
 
   public async Task<CreatePaymentResponseDto> CreatePaymentAsync(CreatePaymentRequestDto request, Guid customerId, string ipAddress)
@@ -326,6 +332,21 @@ public class PaymentService : IPaymentService
 
     await _auditService.LogActionAsync("PAYMENT_SUCCESS", "Payment", null, "SYSTEM", payment.Id, null, $"{{ \"amount\": {payment.Amount}, \"type\": \"{payment.Type}\" }}");
 
+    // Push SignalR notification to the user
+    await _hubContext.Clients.User(payment.CustomerId.ToString()).SendAsync("ReceivePaymentSuccess", payment.Id);
+
     return result;
+  }
+
+  public async Task<PaymentStatusResponseDto> GetPaymentStatusAsync(Guid paymentId, Guid currentUserId)
+  {
+    var payment = await _paymentRepo.FindByIdAsync(paymentId);
+    if (payment == null)
+      throw new KeyNotFoundException("Payment not found");
+
+    if (payment.CustomerId != currentUserId)
+      throw new UnauthorizedAccessException("You are not authorized to view this payment");
+
+    return new PaymentStatusResponseDto { Status = payment.Status };
   }
 }
