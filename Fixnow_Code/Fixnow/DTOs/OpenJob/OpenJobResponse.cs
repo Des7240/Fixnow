@@ -27,4 +27,9 @@ public class OpenJobResponse
   public List<string> FileUrls { get; set; } = new();
   public int OfferCount { get; set; }
   public double? DistanceKm { get; set; }
+
+  /// <summary>
+  /// Direct Google Maps direction link to the job's location.
+  /// </summary>
+  public string? NavigationUrl { get; set; }
 }

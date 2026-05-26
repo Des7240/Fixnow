@@ -346,7 +346,8 @@ public class BookingService : IBookingService
           UnitPrice = i.UnitPrice,
           TotalPrice = i.TotalPrice
         }).ToList()
-      }).ToList()
+      }).ToList(),
+      NavigationUrl = $"https://www.google.com/maps/dir/?api=1&destination={booking.Lat.ToString(System.Globalization.CultureInfo.InvariantCulture)},{booking.Lng.ToString(System.Globalization.CultureInfo.InvariantCulture)}"
     };
   }
 }

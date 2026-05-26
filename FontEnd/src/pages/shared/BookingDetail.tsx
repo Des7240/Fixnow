@@ -38,6 +38,7 @@ interface Booking {
   };
   quotations: any[];
   totalAmount?: number;
+  navigationUrl?: string;
 }
 
 export default function BookingDetail() {
@@ -306,9 +307,17 @@ export default function BookingDetail() {
             <div className="w-10 h-10 bg-gray-50 rounded-2xl flex items-center justify-center flex-shrink-0 text-orange-500">
               <MapPin className="w-5 h-5" />
             </div>
-            <div>
+            <div className="flex-1">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Địa chỉ thực hiện</p>
               <p className="text-sm text-gray-700 font-medium mt-0.5">{booking.address}</p>
+              {isWorker && booking.navigationUrl && (
+                <button 
+                  onClick={() => window.open(booking.navigationUrl, '_blank')}
+                  className="mt-2 flex items-center gap-1.5 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-all w-fit"
+                >
+                  <MapPin className="w-3.5 h-3.5" /> Dẫn đường tới đây
+                </button>
+              )}
             </div>
           </div>
 

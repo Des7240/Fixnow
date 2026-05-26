@@ -533,7 +533,8 @@ public class OpenJobService : IOpenJobService
       ModerationStatus = job.ModerationStatus,
       ReportCount = job.ReportCount,
       CreatedAt = job.CreatedAt,
-      FileUrls = job.Attachments.Select(a => a.File.ObjectKey).ToList()
+      FileUrls = job.Attachments.Select(a => a.File.ObjectKey).ToList(),
+      NavigationUrl = $"https://www.google.com/maps/dir/?api=1&destination={job.Lat.ToString(System.Globalization.CultureInfo.InvariantCulture)},{job.Lng.ToString(System.Globalization.CultureInfo.InvariantCulture)}"
     };
   }
 

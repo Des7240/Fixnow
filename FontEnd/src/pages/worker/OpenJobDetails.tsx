@@ -16,6 +16,7 @@ interface OpenJob {
   minBudget?: number;
   maxBudget?: number;
   urgencyLevel?: string;
+  navigationUrl?: string;
 }
 
 export default function OpenJobDetails() {
@@ -134,8 +135,18 @@ export default function OpenJobDetails() {
 
             <div className="space-y-3">
                 <div className="flex items-start gap-3 text-gray-600">
-                    <MapPin className="w-5 h-5 text-orange-500 flex-shrink-0" />
-                    <span className="text-sm font-medium">{job.address}</span>
+                    <MapPin className="w-5 h-5 text-orange-500 flex-shrink-0 mt-1" />
+                    <div className="flex-1">
+                        <span className="text-sm font-medium block">{job.address}</span>
+                        {job.navigationUrl && (
+                          <button 
+                            onClick={() => window.open(job.navigationUrl, '_blank')}
+                            className="mt-2 flex items-center gap-1.5 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-all w-fit"
+                          >
+                            <MapPin className="w-3.5 h-3.5" /> Dẫn đường tới đây
+                          </button>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

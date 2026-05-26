@@ -19,6 +19,11 @@ public class BookingResponseDto
   public BookingPartyDto? Worker { get; set; }
   public BookingServiceDto Service { get; set; } = null!;
   public List<QuotationDto> Quotations { get; set; } = new();
+
+  /// <summary>
+  /// Direct Google Maps direction link to the customer's location.
+  /// </summary>
+  public string? NavigationUrl { get; set; }
 }
 
 /// <summary>Basic info for a booking party (customer or worker).</summary>
