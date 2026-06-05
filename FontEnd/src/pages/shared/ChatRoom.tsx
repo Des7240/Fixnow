@@ -71,7 +71,7 @@ export default function ChatRoom() {
         content: text,
         messageType: 'TEXT'
       });
-      
+
       // Add message immediately for realtime feedback
       addMessage(res.data);
     } catch (err) {
@@ -164,18 +164,18 @@ export default function ChatRoom() {
       {/* Input Area */}
       <div className="bg-white p-4 border-t border-gray-100 pb-safe">
         <div className="flex items-end gap-2 bg-gray-50 p-2 rounded-3xl border border-gray-200 focus-within:border-orange-300 focus-within:ring-2 focus-within:ring-orange-500/20 transition-all">
-          <button 
+          <button
             onClick={() => fileInputRef.current?.click()}
             className="p-2 text-gray-400 hover:text-orange-500 transition-colors"
           >
             <ImageIcon className="w-6 h-6" />
           </button>
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleImageUpload} 
-            accept="image/*" 
-            className="hidden" 
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImageUpload}
+            accept="image/*"
+            className="hidden"
           />
           <textarea
             value={inputText}
@@ -190,7 +190,7 @@ export default function ChatRoom() {
               }
             }}
           />
-          <button 
+          <button
             onClick={sendMessage}
             disabled={!inputText.trim()}
             className="p-2 text-white bg-orange-500 rounded-full hover:bg-orange-600 disabled:bg-gray-300 transition-all flex-shrink-0"

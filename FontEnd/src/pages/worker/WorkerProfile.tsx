@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { User, Briefcase, Wrench, Save, Star, MessageSquare, LogOut, Lock, Shield, FileBadge, ChevronRight } from 'lucide-react';
 import { message, Modal, Form, Input } from 'antd';
@@ -23,10 +23,10 @@ export default function WorkerProfile() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [skillStatuses, setSkillStatuses] = useState<Record<string, string>>({});
-  const [availableServices, setAvailableServices] = useState<{id: string, name: string, iconUrl?: string}[]>([]);
+  const [availableServices, setAvailableServices] = useState<{ id: string, name: string, iconUrl?: string }[]>([]);
   const [ratingSummary, setRatingSummary] = useState({ averageRating: 0, totalReviews: 0 });
   const [reviews, setReviews] = useState<Review[]>([]);
   const { register, handleSubmit, setValue, formState: { errors } } = useForm();
@@ -63,7 +63,7 @@ export default function WorkerProfile() {
         // First time
       }
     };
-    
+
     const fetchReviews = async (workerId: string) => {
       try {
         const [summaryRes, reviewsRes] = await Promise.all([
@@ -111,7 +111,7 @@ export default function WorkerProfile() {
       const res = await axiosInstance.post('/workers/profile/skills', {
         serviceIds: selectedSkills
       });
-      
+
       if (res.data && res.data.skills) {
         setSelectedSkills(res.data.skills.map((s: any) => s.serviceId));
         const statuses: Record<string, string> = {};
@@ -148,12 +148,12 @@ export default function WorkerProfile() {
 
   const handleLogout = async () => {
     try {
-        await authApi.logout();
+      await authApi.logout();
     } catch (error) {
-        console.error('Logout error', error);
+      console.error('Logout error', error);
     } finally {
-        logout();
-        navigate('/login');
+      logout();
+      navigate('/login');
     }
   };
 
@@ -162,32 +162,32 @@ export default function WorkerProfile() {
     if (!file || !user) return;
 
     try {
-        setAvatarUploading(true);
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        const uploadRes = await axiosInstance.post('/files/upload', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
+      setAvatarUploading(true);
+      const formData = new FormData();
+      formData.append('file', file);
 
-        const newAvatarUrl = uploadRes.data.objectKey;
+      const uploadRes = await axiosInstance.post('/files/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
 
-        const res = await authApi.updateProfile({
-            fullName: user.fullName,
-            phoneNumber: user.phoneNumber,
-            avatarUrl: newAvatarUrl
-        });
-        
-        const { accessToken, user: updatedUser } = res.data;
-        useAuthStore.getState().setAuth(updatedUser as any, accessToken);
-        
-        message.success('Cập nhật ảnh đại diện thành công!');
+      const newAvatarUrl = uploadRes.data.objectKey;
+
+      const res = await authApi.updateProfile({
+        fullName: user.fullName,
+        phoneNumber: user.phoneNumber,
+        avatarUrl: newAvatarUrl
+      });
+
+      const { accessToken, user: updatedUser } = res.data;
+      useAuthStore.getState().setAuth(updatedUser as any, accessToken);
+
+      message.success('Cập nhật ảnh đại diện thành công!');
     } catch (error) {
-        message.error('Lỗi khi tải ảnh lên');
-        console.error(error);
+      message.error('Lỗi khi tải ảnh lên');
+      console.error(error);
     } finally {
-        setAvatarUploading(false);
-        if (fileInputRef.current) fileInputRef.current.value = '';
+      setAvatarUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -203,29 +203,29 @@ export default function WorkerProfile() {
           <div className="relative mb-4">
             <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 font-bold text-3xl overflow-hidden shadow-inner">
               {user?.avatarUrl ? (
-                  <img src={getImageUrl(user.avatarUrl)} alt="Avatar" className="w-full h-full object-cover" />
+                <img src={getImageUrl(user.avatarUrl)} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                  user?.fullName.charAt(0)
+                user?.fullName.charAt(0)
               )}
             </div>
-            <button 
-                onClick={() => fileInputRef.current?.click()}
-                disabled={avatarUploading}
-                className="absolute bottom-0 right-0 bg-orange-500 text-white p-1.5 rounded-full border-2 border-white hover:bg-orange-600 transition-colors shadow-sm disabled:opacity-50"
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={avatarUploading}
+              className="absolute bottom-0 right-0 bg-orange-500 text-white p-1.5 rounded-full border-2 border-white hover:bg-orange-600 transition-colors shadow-sm disabled:opacity-50"
             >
-                {avatarUploading ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
+              {avatarUploading ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
             </button>
-            <input 
-                type="file" 
-                ref={fileInputRef}
-                onChange={handleAvatarUpload}
-                accept="image/*"
-                className="hidden"
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleAvatarUpload}
+              accept="image/*"
+              className="hidden"
             />
           </div>
           <h2 className="text-xl font-bold text-gray-900">{user?.fullName}</h2>
           <p className="text-gray-500 text-sm mb-4">{user?.email}</p>
-          
+
           <div className="flex items-center gap-6 w-full pt-4 border-t border-gray-50">
             <div className="flex-1 text-center">
               <div className="flex items-center justify-center gap-1 text-orange-500 font-bold text-lg">
@@ -249,12 +249,12 @@ export default function WorkerProfile() {
             <h3 className="flex items-center gap-2 font-bold text-gray-900 mb-4">
               <Briefcase className="w-5 h-5 text-orange-500" /> Thông tin cơ bản
             </h3>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Số điện thoại <span className="text-red-500">*</span></label>
                 <input
-                  {...register('phoneNumber', { 
+                  {...register('phoneNumber', {
                     required: 'Số điện thoại là bắt buộc',
                     pattern: {
                       value: /^(0[3|5|7|8|9])+([0-9]{8})$/,
@@ -278,7 +278,7 @@ export default function WorkerProfile() {
                   placeholder="Ví dụ: 3"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Mô tả ngắn</label>
                 <textarea
@@ -296,20 +296,20 @@ export default function WorkerProfile() {
               <Wrench className="w-5 h-5 text-orange-500" /> Kỹ năng chuyên môn
             </h3>
             <p className="text-xs text-gray-500 mb-4">Hệ thống sẽ chỉ phát đơn phù hợp với kỹ năng bạn chọn.</p>
-            
+
             <div className="grid grid-cols-2 gap-3">
               {availableServices.map(srv => {
                 const isSelected = selectedSkills.includes(srv.id);
                 const status = skillStatuses[srv.id] || 'PENDING';
-                
+
                 return (
-                  <div 
+                  <div
                     key={srv.id}
                     onClick={() => toggleSkill(srv.id)}
                     className={clsx(
                       "relative flex flex-col items-center p-3 rounded-xl border-2 transition-all cursor-pointer",
                       isSelected
-                        ? status === 'APPROVED' 
+                        ? status === 'APPROVED'
                           ? "border-green-500 bg-green-50 text-green-700"
                           : status === 'REJECTED'
                             ? "border-red-500 bg-red-50 text-red-700"
@@ -321,8 +321,8 @@ export default function WorkerProfile() {
                       <div className={clsx(
                         "absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase",
                         status === 'APPROVED' ? "bg-green-100 text-green-700" :
-                        status === 'REJECTED' ? "bg-red-100 text-red-700" :
-                        "bg-orange-100 text-orange-700"
+                          status === 'REJECTED' ? "bg-red-100 text-red-700" :
+                            "bg-orange-100 text-orange-700"
                       )}>
                         {status === 'APPROVED' ? 'Đã duyệt' : status === 'REJECTED' ? 'Từ chối' : 'Đang chờ'}
                       </div>
@@ -349,7 +349,7 @@ export default function WorkerProfile() {
         </form>
 
         <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 mt-6 cursor-pointer hover:bg-gray-50 transition-colors"
-             onClick={() => setIsPasswordModalVisible(true)}>
+          onClick={() => setIsPasswordModalVisible(true)}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-500">
@@ -365,7 +365,7 @@ export default function WorkerProfile() {
         </div>
 
         <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 mt-4 cursor-pointer hover:bg-gray-50 transition-colors"
-             onClick={() => navigate('/worker/kyc')}>
+          onClick={() => navigate('/worker/kyc')}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
@@ -384,7 +384,7 @@ export default function WorkerProfile() {
           <h3 className="flex items-center gap-2 font-bold text-gray-900 mb-4 px-2">
             <MessageSquare className="w-5 h-5 text-orange-500" /> Đánh giá từ khách hàng
           </h3>
-          
+
           {reviews.length === 0 ? (
             <div className="bg-white p-8 rounded-3xl border border-dashed border-gray-200 text-center text-gray-400">
               <Star className="w-10 h-10 mx-auto mb-2 opacity-20" />
@@ -419,81 +419,81 @@ export default function WorkerProfile() {
 
         {/* Nút đăng xuất */}
         <div className="mt-8 mb-6">
-          <button 
-              onClick={handleLogout}
-              className="w-full bg-white border border-red-200 text-red-600 font-semibold py-3.5 rounded-xl shadow-sm flex justify-center items-center gap-2 hover:bg-red-50 transition-colors"
+          <button
+            onClick={handleLogout}
+            className="w-full bg-white border border-red-200 text-red-600 font-semibold py-3.5 rounded-xl shadow-sm flex justify-center items-center gap-2 hover:bg-red-50 transition-colors"
           >
-              <LogOut size={20} />
-              Đăng xuất
+            <LogOut size={20} />
+            Đăng xuất
           </button>
         </div>
-        
+
       </div>
 
       {/* Change Password Modal */}
       <Modal
-          title={
-              <div className="flex items-center gap-2">
-                  <Lock size={20} className="text-orange-500" />
-                  <span>Đổi mật khẩu</span>
-              </div>
-          }
-          open={isPasswordModalVisible}
-          onCancel={() => {
-              setIsPasswordModalVisible(false);
-              passwordForm.resetFields();
-          }}
-          onOk={() => passwordForm.submit()}
-          confirmLoading={passwordLoading}
-          okText="Cập nhật"
-          cancelText="Hủy"
-          centered
-          className="rounded-2xl overflow-hidden"
+        title={
+          <div className="flex items-center gap-2">
+            <Lock size={20} className="text-orange-500" />
+            <span>Đổi mật khẩu</span>
+          </div>
+        }
+        open={isPasswordModalVisible}
+        onCancel={() => {
+          setIsPasswordModalVisible(false);
+          passwordForm.resetFields();
+        }}
+        onOk={() => passwordForm.submit()}
+        confirmLoading={passwordLoading}
+        okText="Cập nhật"
+        cancelText="Hủy"
+        centered
+        className="rounded-2xl overflow-hidden"
       >
-          <Form
-              form={passwordForm}
-              layout="vertical"
-              onFinish={handleChangePassword}
-              className="mt-4"
+        <Form
+          form={passwordForm}
+          layout="vertical"
+          onFinish={handleChangePassword}
+          className="mt-4"
+        >
+          <Form.Item
+            name="oldPassword"
+            label="Mật khẩu hiện tại"
+            rules={[{ required: true, message: 'Vui lòng nhập mật khẩu hiện tại' }]}
           >
-              <Form.Item
-                  name="oldPassword"
-                  label="Mật khẩu hiện tại"
-                  rules={[{ required: true, message: 'Vui lòng nhập mật khẩu hiện tại' }]}
-              >
-                  <Input.Password placeholder="********" className="rounded-lg py-2" />
-              </Form.Item>
+            <Input.Password placeholder="********" className="rounded-lg py-2" />
+          </Form.Item>
 
-              <Form.Item
-                  name="newPassword"
-                  label="Mật khẩu mới"
-                  rules={[
-                      { required: true, message: 'Vui lòng nhập mật khẩu mới' },
-                      { min: 6, message: 'Mật khẩu phải từ 6 ký tự trở lên' }
-                  ]}
-              >
-                  <Input.Password placeholder="********" className="rounded-lg py-2" />
-              </Form.Item>
+          <Form.Item
+            name="newPassword"
+            label="Mật khẩu mới"
+            rules={[
+              { required: true, message: 'Vui lòng nhập mật khẩu mới' },
+              { min: 6, message: 'Mật khẩu phải từ 6 ký tự trở lên' }
+            ]}
+          >
+            <Input.Password placeholder="********" className="rounded-lg py-2" />
+          </Form.Item>
 
-              <Form.Item
-                  name="confirmPassword"
-                  label="Xác nhận mật khẩu mới"
-                  dependencies={['newPassword']}
-                  rules={[
-                      { required: true, message: 'Vui lòng xác nhận mật khẩu mới' },
-                      ({ getFieldValue }) => ({
-                          validator(_, value) {
-                              if (!value || getFieldValue('newPassword') === value) {
-                                  return Promise.resolve();
-                              }
-                              return Promise.reject(new Error('Mật khẩu xác nhận không khớp!'));
-                          },
-                      }),
-                  ]}
-              >
-                  <Input.Password placeholder="********" className="rounded-lg py-2" />
-              </Form.Item>
-          </Form>
+          <Form.Item
+            name="confirmPassword"
+            label="Xác nhận mật khẩu mới"
+            dependencies={['newPassword']}
+            rules={[
+              { required: true, message: 'Vui lòng xác nhận mật khẩu mới' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('newPassword') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error('Mật khẩu xác nhận không khớp!'));
+                },
+              }),
+            ]}
+          >
+            <Input.Password placeholder="********" className="rounded-lg py-2" />
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );
