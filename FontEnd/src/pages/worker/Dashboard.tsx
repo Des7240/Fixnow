@@ -13,7 +13,6 @@ export default function WorkerDashboard() {
   const navigate = useNavigate();
   const [isOnline, setIsOnline] = useState(false);
   const [locationUpdateActive, setLocationUpdateActive] = useState(false);
-  const [newJob, setNewJob] = useState<any>(null);
   const [kycStatus, setKycStatus] = useState<string>('NOT_SUBMITTED');
 
   useEffect(() => {
@@ -70,23 +69,7 @@ export default function WorkerDashboard() {
     }
   };
 
-  useEffect(() => {
-    // Fetch existing matching jobs when component mounts or becomes online
-    const fetchMatchingJobs = async () => {
-      if (isOnline) {
-        try {
-          const res = await axiosInstance.get('/bookings/matching');
-          if (res.data && res.data.length > 0) {
-            setNewJob(res.data[0]);
-          }
-        } catch (err) {
-          console.error('Lỗi lấy danh sách đơn matching:', err);
-        }
-      }
-    };
 
-    fetchMatchingJobs();
-  }, [isOnline]);
 
   useEffect(() => {
     let intervalId: ReturnType<typeof setInterval>;
@@ -142,24 +125,7 @@ export default function WorkerDashboard() {
     }
   };
 
-  useEffect(() => {
-    if (connection) {
-      connection.on('ReceiveBookingMatch', (data) => {
-        message.info('Có đơn hàng mới phù hợp với bạn!');
-        setNewJob(data);
-      });
 
-      return () => {
-        connection.off('ReceiveBookingMatch');
-      };
-    }
-  }, [connection]);
-
-  const acceptJob = () => {
-    if (newJob) {
-      navigate(`/worker/bookings/${newJob.id || newJob.bookingId}`);
-    }
-  };
 
   return (
     <div className="min-h-full bg-gray-50 flex flex-col">
@@ -234,33 +200,7 @@ export default function WorkerDashboard() {
               Xem việc công khai gần đây
             </button>
             
-            {/* New Job Modal Overlay */}
-            {newJob && (
-              <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in duration-300">
-                  <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Briefcase className="w-8 h-8 animate-bounce" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">Đơn mới vừa đến!</h3>
-                  <p className="text-gray-600 text-sm mb-6">Có khách hàng ở gần bạn đang cần sửa chữa ngay.</p>
-                  
-                  <div className="flex gap-3">
-                    <button 
-                      onClick={() => setNewJob(null)}
-                      className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl"
-                    >
-                      Bỏ qua
-                    </button>
-                    <button 
-                      onClick={acceptJob}
-                      className="flex-1 py-3 bg-orange-500 text-white font-bold rounded-xl shadow-lg shadow-orange-500/30"
-                    >
-                      Xem chi tiết
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center text-center text-gray-400">

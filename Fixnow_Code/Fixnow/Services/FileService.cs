@@ -1,3 +1,5 @@
+using Amazon.S3;
+using Amazon.S3.Transfer;
 using Fixnow.Entities;
 using Fixnow.Repositories.Interfaces;
 using Fixnow.Services.Interfaces;
@@ -9,11 +11,15 @@ public class FileService : IFileService
 {
   private readonly IWebHostEnvironment _env;
   private readonly IFileRepository _fileRepo;
+  private readonly IAmazonS3? _s3Client;
+  private readonly IConfiguration _config;
 
-  public FileService(IWebHostEnvironment env, IFileRepository fileRepo)
+  public FileService(IWebHostEnvironment env, IFileRepository fileRepo, IConfiguration config, IServiceProvider serviceProvider)
   {
     _env = env;
     _fileRepo = fileRepo;
+    _config = config;
+    _s3Client = serviceProvider.GetService<IAmazonS3>();
   }
 
   /// <inheritdoc/>
@@ -30,19 +36,49 @@ public class FileService : IFileService
     if (!allowedTypes.Contains(file.ContentType))
       throw new ArgumentException("Invalid file type.");
 
-    // Create uploads directory if not exists
-    var uploadPath = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads", bucket);
-    if (!Directory.Exists(uploadPath))
-    {
-      Directory.CreateDirectory(uploadPath);
-    }
-
     var fileName = $"{Guid.NewGuid()}_{file.FileName}";
-    var filePath = Path.Combine(uploadPath, fileName);
+    string objectKey;
 
-    using (var stream = new FileStream(filePath, FileMode.Create))
+    var r2BucketName = _config["CloudflareR2:BucketName"];
+    var r2PublicUrl = _config["CloudflareR2:PublicUrl"];
+
+    // Use Cloudflare R2 if configured and client is available
+    if (_s3Client != null && !string.IsNullOrEmpty(r2BucketName))
     {
-      await file.CopyToAsync(stream);
+      using var newMemoryStream = new MemoryStream();
+      await file.CopyToAsync(newMemoryStream);
+      newMemoryStream.Position = 0;
+
+      var uploadRequest = new TransferUtilityUploadRequest
+      {
+          InputStream = newMemoryStream,
+          Key = fileName,
+          BucketName = r2BucketName,
+          ContentType = file.ContentType,
+          DisablePayloadSigning = true // Recommended for R2 to improve performance
+      };
+
+      var fileTransferUtility = new TransferUtility(_s3Client);
+      await fileTransferUtility.UploadAsync(uploadRequest);
+
+      objectKey = !string.IsNullOrEmpty(r2PublicUrl) ? $"{r2PublicUrl.TrimEnd('/')}/{fileName}" : fileName;
+      bucket = "r2"; // update bucket name to r2
+    }
+    else
+    {
+      // Fallback to local storage
+      var uploadPath = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads", bucket);
+      if (!Directory.Exists(uploadPath))
+      {
+        Directory.CreateDirectory(uploadPath);
+      }
+
+      var filePath = Path.Combine(uploadPath, fileName);
+      using (var stream = new FileStream(filePath, FileMode.Create))
+      {
+        await file.CopyToAsync(stream);
+      }
+      objectKey = $"/uploads/{bucket}/{fileName}";
     }
 
     var uploadedFile = new UploadedFile
@@ -51,7 +87,7 @@ public class FileService : IFileService
       ContentType = file.ContentType,
       FileSize = file.Length,
       Bucket = bucket,
-      ObjectKey = $"/uploads/{bucket}/{fileName}",
+      ObjectKey = objectKey,
       UploadedBy = uploaderId
     };
 

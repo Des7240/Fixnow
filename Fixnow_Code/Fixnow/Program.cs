@@ -11,6 +11,8 @@ using Fixnow.Services.Providers;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Amazon.S3;
+using Amazon.Runtime;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -237,6 +239,23 @@ builder.Services.AddScoped<IDisputeService, DisputeService>();
 
 builder.Services.AddHttpClient<IGeminiService, GeminiService>();
 
+// Configure Cloudflare R2 (S3 Compatible)
+var r2AccessKey = builder.Configuration["CloudflareR2:AccessKey"];
+var r2SecretKey = builder.Configuration["CloudflareR2:SecretKey"];
+var r2ServiceUrl = builder.Configuration["CloudflareR2:ServiceURL"];
+
+if (!string.IsNullOrEmpty(r2AccessKey) && !string.IsNullOrEmpty(r2SecretKey) && !string.IsNullOrEmpty(r2ServiceUrl))
+{
+    var awsCredentials = new BasicAWSCredentials(r2AccessKey, r2SecretKey);
+    var s3Config = new AmazonS3Config
+    {
+        ServiceURL = r2ServiceUrl,
+        ForcePathStyle = true // Required for some S3 compatible services like R2 depending on URL structure
+    };
+    builder.Services.AddSingleton<IAmazonS3>(new AmazonS3Client(awsCredentials, s3Config));
+}
+
+builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, Fixnow.Providers.CustomUserIdProvider>();
 builder.Services.AddSignalR();
 
 // ─── Hangfire ─────────────────────────────────────────────────────────────────

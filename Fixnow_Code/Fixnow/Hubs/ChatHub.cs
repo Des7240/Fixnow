@@ -16,7 +16,7 @@ public class ChatHub : Hub
     _conversationRepo = conversationRepo;
   }
 
-  private Guid CurrentUserId => Guid.Parse(Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
+  private Guid CurrentUserId => Guid.Parse(Context.UserIdentifier ?? Guid.Empty.ToString());
 
   public override async Task OnConnectedAsync()
   {
