@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, MapPin, Wrench, Clock, FileText, Navigation, Loader2, Upload, X, Shield, DollarSign, Home } from 'lucide-react';
 import { message, Select, InputNumber } from 'antd';
 import axiosInstance from '../../utils/axiosInstance';
-import { API_BASE_URL } from '../../utils/constants';
+import { API_BASE_URL, getImageUrl } from '../../utils/constants';
 
 const openJobSchema = z.object({
   serviceId: z.string().min(1, 'Vui lòng chọn dịch vụ'),
@@ -233,7 +233,7 @@ export default function CreateOpenJob() {
             <div className="grid grid-cols-3 gap-3">
                 {previewUrls.map((url, index) => (
                     <div key={index} className="relative aspect-square rounded-xl overflow-hidden group">
-                        <img src={`${API_BASE_URL}${url}`} alt="preview" className="w-full h-full object-cover" />
+                        <img src={getImageUrl(url)} alt="preview" className="w-full h-full object-cover" />
                         <button 
                             type="button"
                             onClick={() => removeImage(index)}

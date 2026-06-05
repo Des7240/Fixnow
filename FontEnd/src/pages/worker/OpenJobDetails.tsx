@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Clock, FileText, Wrench, Shield, Send, Loader2, DollarSign, AlertCircle } from 'lucide-react';
 import { message, Modal } from 'antd';
 import axiosInstance from '../../utils/axiosInstance';
-import { API_BASE_URL } from '../../utils/constants';
+import { API_BASE_URL, getImageUrl } from '../../utils/constants';
 
 interface OpenJob {
   id: string;
@@ -173,7 +173,7 @@ export default function OpenJobDetails() {
                     {job.fileUrls.map((url, i) => (
                         <img 
                             key={i} 
-                            src={`${API_BASE_URL}${url}`} 
+                            src={getImageUrl(url)} 
                             alt="attachment" 
                             className="w-full aspect-video object-cover rounded-xl"
                         />

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Star, Clock, DollarSign, CheckCircle, Loader2, Wrench, User, ChevronRight, Shield, FileText, MapPin } from 'lucide-react';
 import { message, Modal, Badge } from 'antd';
 import axiosInstance from '../../utils/axiosInstance';
-import { API_BASE_URL } from '../../utils/constants';
+import { API_BASE_URL, getImageUrl } from '../../utils/constants';
 
 interface Offer {
   id: string;
@@ -151,7 +151,7 @@ export default function ViewOffers() {
                                 >
                                     <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center overflow-hidden">
                                         {offer.workerAvatar ? (
-                                            <img src={`${API_BASE_URL}${offer.workerAvatar}`} alt="avatar" className="w-full h-full object-cover" />
+                                            <img src={getImageUrl(offer.workerAvatar)} alt="avatar" className="w-full h-full object-cover" />
                                         ) : (
                                             <User className="w-6 h-6 text-orange-600" />
                                         )}
@@ -291,7 +291,7 @@ export default function ViewOffers() {
                   {job.fileUrls.map((url, i) => (
                     <img 
                       key={i} 
-                      src={`${API_BASE_URL}${url}`} 
+                      src={getImageUrl(url)} 
                       alt="attachment" 
                       className="w-full aspect-video object-cover rounded-xl"
                     />
