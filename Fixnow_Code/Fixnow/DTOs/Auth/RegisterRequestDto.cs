@@ -19,6 +19,6 @@ public class RegisterRequestDto
   [Required]
   public string FullName { get; set; } = string.Empty;
 
-  // [Required]
-  // public UserRole Role { get; set; } = UserRole.CUSTOMER;
+  [Required]
+  public UserRole Role { get; set; } = UserRole.CUSTOMER;
 }
