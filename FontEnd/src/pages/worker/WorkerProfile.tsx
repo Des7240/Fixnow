@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { User, Briefcase, Wrench, Save, Star, MessageSquare, LogOut, Lock, Shield, FileBadge, ChevronRight } from 'lucide-react';
 import { message, Modal, Form, Input } from 'antd';
+import { Camera, Loader2 } from 'lucide-react';
 import axiosInstance from '../../utils/axiosInstance';
 import { useAuthStore } from '../../stores/authStore';
 import { clsx } from 'clsx';
@@ -21,6 +22,8 @@ export default function WorkerProfile() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [skillStatuses, setSkillStatuses] = useState<Record<string, string>>({});
   const [availableServices, setAvailableServices] = useState<{id: string, name: string, iconUrl?: string}[]>([]);
@@ -154,6 +157,40 @@ export default function WorkerProfile() {
     }
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    try {
+        setAvatarUploading(true);
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const uploadRes = await axiosInstance.post('/files/upload', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+
+        const newAvatarUrl = uploadRes.data.objectKey;
+
+        const res = await authApi.updateProfile({
+            fullName: user.fullName,
+            phoneNumber: user.phoneNumber,
+            avatarUrl: newAvatarUrl
+        });
+        
+        const { accessToken, user: updatedUser } = res.data;
+        useAuthStore.getState().setAuth(updatedUser as any, accessToken);
+        
+        message.success('Cập nhật ảnh đại diện thành công!');
+    } catch (error) {
+        message.error('Lỗi khi tải ảnh lên');
+        console.error(error);
+    } finally {
+        setAvatarUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="min-h-full bg-gray-50 flex flex-col">
       <div className="bg-white px-6 pt-10 pb-4 shadow-sm z-10 sticky top-0 flex items-center gap-3">
@@ -163,8 +200,28 @@ export default function WorkerProfile() {
 
       <div className="flex-1 p-6 overflow-y-auto pb-24">
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 mb-6 flex flex-col items-center">
-          <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 font-bold text-3xl mb-4">
-            {user?.fullName.charAt(0)}
+          <div className="relative mb-4">
+            <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 font-bold text-3xl overflow-hidden shadow-inner">
+              {user?.avatarUrl ? (
+                  <img src={getImageUrl(user.avatarUrl)} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                  user?.fullName.charAt(0)
+              )}
+            </div>
+            <button 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={avatarUploading}
+                className="absolute bottom-0 right-0 bg-orange-500 text-white p-1.5 rounded-full border-2 border-white hover:bg-orange-600 transition-colors shadow-sm disabled:opacity-50"
+            >
+                {avatarUploading ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
+            </button>
+            <input 
+                type="file" 
+                ref={fileInputRef}
+                onChange={handleAvatarUpload}
+                accept="image/*"
+                className="hidden"
+            />
           </div>
           <h2 className="text-xl font-bold text-gray-900">{user?.fullName}</h2>
           <p className="text-gray-500 text-sm mb-4">{user?.email}</p>

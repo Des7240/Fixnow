@@ -4,6 +4,9 @@ import { User, Mail, Shield, Phone, LogOut, ChevronRight, Lock } from 'lucide-re
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../../modules/auth/authApi';
 import { Modal, Form, Input, message } from 'antd';
+import { Camera, Loader2 } from 'lucide-react';
+import axiosInstance from '../../utils/axiosInstance';
+import { getImageUrl } from '../../utils/constants';
 
 const CustomerProfile: React.FC = () => {
     const { user, logout } = useAuthStore();
@@ -13,6 +16,8 @@ const CustomerProfile: React.FC = () => {
     const [form] = Form.useForm();
     const [profileForm] = Form.useForm();
     const [loading, setLoading] = useState(false);
+    const [avatarUploading, setAvatarUploading] = useState(false);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     const handleLogout = async () => {
         try {
@@ -68,14 +73,68 @@ const CustomerProfile: React.FC = () => {
 
     if (!user) return <div className="p-4 text-center">Đang tải thông tin...</div>;
 
+    const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setAvatarUploading(true);
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const uploadRes = await axiosInstance.post('/files/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            const newAvatarUrl = uploadRes.data.objectKey;
+
+            const res = await authApi.updateProfile({
+                fullName: user.fullName,
+                phoneNumber: user.phoneNumber,
+                avatarUrl: newAvatarUrl
+            });
+            
+            const { accessToken, user: updatedUser } = res.data;
+            useAuthStore.getState().setAuth(updatedUser as any, accessToken);
+            
+            message.success('Cập nhật ảnh đại diện thành công!');
+        } catch (error) {
+            message.error('Lỗi khi tải ảnh lên');
+            console.error(error);
+        } finally {
+            setAvatarUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
     return (
         <div className="bg-gray-50 min-h-screen pb-20">
             {/* Header */}
             <div className="bg-blue-600 px-6 pt-12 pb-6 text-white rounded-b-3xl shadow-md">
                 <h1 className="text-2xl font-bold mb-4">Tài khoản của tôi</h1>
                 <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-blue-600 shadow-inner">
-                        <User size={32} />
+                    <div className="relative">
+                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-blue-600 shadow-inner overflow-hidden">
+                            {user.avatarUrl ? (
+                                <img src={getImageUrl(user.avatarUrl)} alt="Avatar" className="w-full h-full object-cover" />
+                            ) : (
+                                <User size={32} />
+                            )}
+                        </div>
+                        <button 
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={avatarUploading}
+                            className="absolute bottom-0 right-0 bg-blue-500 text-white p-1.5 rounded-full border-2 border-white hover:bg-blue-600 transition-colors shadow-sm disabled:opacity-50"
+                        >
+                            {avatarUploading ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} />}
+                        </button>
+                        <input 
+                            type="file" 
+                            ref={fileInputRef}
+                            onChange={handleAvatarUpload}
+                            accept="image/*"
+                            className="hidden"
+                        />
                     </div>
                     <div>
                         <h2 className="text-xl font-semibold">{user.fullName}</h2>
