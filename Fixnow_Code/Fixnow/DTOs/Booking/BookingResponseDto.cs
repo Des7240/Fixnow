@@ -14,6 +14,7 @@ public class BookingResponseDto
   public double Lat { get; set; }
   public double Lng { get; set; }
   public string? Description { get; set; }
+  public List<string>? FileUrls { get; set; }
   public DateTime CreatedAt { get; set; }
   public BookingPartyDto Customer { get; set; } = null!;
   public BookingPartyDto? Worker { get; set; }

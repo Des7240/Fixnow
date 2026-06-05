@@ -86,6 +86,7 @@ public class BookingService : IBookingService
       Lng = request.Lng,
       Location = location,
       Description = request.Description,
+      FileUrls = request.FileUrls ?? new List<string>(),
       Status = BookingStatus.PENDING,
     };
 
@@ -306,6 +307,7 @@ public class BookingService : IBookingService
       Lat = booking.Lat,
       Lng = booking.Lng,
       Description = booking.Description,
+      FileUrls = booking.FileUrls,
       CreatedAt = booking.CreatedAt,
       Customer = new BookingPartyDto
       {

@@ -22,6 +22,7 @@ public class Booking
   public Point Location { get; set; } = null!;
 
   public string? Description { get; set; }
+  public List<string> FileUrls { get; set; } = new();
   
   public decimal? TotalAmount { get; set; } // Set when quote is approved
   

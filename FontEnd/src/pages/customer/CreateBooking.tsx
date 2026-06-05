@@ -3,9 +3,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, MapPin, Wrench, Clock, FileText, Navigation, Loader2, Home } from 'lucide-react';
+import { ArrowLeft, MapPin, Wrench, Clock, FileText, Navigation, Loader2, Home, Camera, X } from 'lucide-react';
 import { message } from 'antd';
 import axiosInstance from '../../utils/axiosInstance';
+import { getImageUrl } from '../../utils/constants';
 
 const bookingSchema = z.object({
   serviceId: z.string().min(1, 'Vui lòng chọn dịch vụ'),
@@ -14,6 +15,7 @@ const bookingSchema = z.object({
   lat: z.number(),
   lng: z.number(),
   description: z.string().optional(),
+  fileUrls: z.array(z.string()).optional()
 });
 
 type BookingForm = z.infer<typeof bookingSchema>;
@@ -32,6 +34,8 @@ export default function CreateBooking() {
   const [loading, setLoading] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [locating, setLocating] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<BookingForm>({
     resolver: zodResolver(bookingSchema),
@@ -40,7 +44,8 @@ export default function CreateBooking() {
       lng: 105.8048,
       serviceId: initialServiceId || '',
       address: '',
-      detailAddress: ''
+      detailAddress: '',
+      fileUrls: []
     }
   });
 
@@ -101,6 +106,46 @@ export default function CreateBooking() {
   };
 
   const selectedService = watch('serviceId');
+  const fileUrls = watch('fileUrls') || [];
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    if (fileUrls.length + files.length > 5) {
+      message.warning('Chỉ được tải lên tối đa 5 ảnh');
+      return;
+    }
+
+    setUploadingImages(true);
+    try {
+      const uploadPromises = files.map(file => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return axiosInstance.post('/files/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      });
+
+      const responses = await Promise.all(uploadPromises);
+      const newUrls = responses.map(res => res.data.objectKey);
+      
+      setValue('fileUrls', [...fileUrls, ...newUrls], { shouldValidate: true });
+      message.success('Tải ảnh lên thành công');
+    } catch (err) {
+      message.error('Lỗi khi tải ảnh lên');
+      console.error(err);
+    } finally {
+      setUploadingImages(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removeImage = (index: number) => {
+    const newUrls = [...fileUrls];
+    newUrls.splice(index, 1);
+    setValue('fileUrls', newUrls, { shouldValidate: true });
+  };
 
   const onSubmit = async (data: BookingForm) => {
     setLoading(true);
@@ -213,6 +258,50 @@ export default function CreateBooking() {
               rows={3}
               className="w-full bg-gray-50 rounded-2xl border-none px-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-orange-500/50 resize-none"
             />
+            
+            {/* Image Upload Area */}
+            <div className="mt-4">
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {fileUrls.map((url, idx) => (
+                  <div key={idx} className="relative w-20 h-20 flex-shrink-0">
+                    <img src={getImageUrl(url)} alt={`upload-${idx}`} className="w-full h-full object-cover rounded-xl border border-gray-200" />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(idx)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-sm hover:bg-red-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                
+                {fileUrls.length < 5 && (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingImages}
+                    className="w-20 h-20 flex-shrink-0 flex flex-col items-center justify-center gap-1 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 hover:border-orange-500 hover:bg-orange-50 transition-colors disabled:opacity-50"
+                  >
+                    {uploadingImages ? (
+                      <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />
+                    ) : (
+                      <>
+                        <Camera className="w-5 h-5 text-gray-400" />
+                        <span className="text-[10px] text-gray-400 font-medium">{fileUrls.length}/5</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+              <input 
+                type="file" 
+                ref={fileInputRef}
+                onChange={handleImageUpload}
+                accept="image/*"
+                multiple
+                className="hidden"
+              />
+            </div>
           </div>
 
           {/* Timing info */}

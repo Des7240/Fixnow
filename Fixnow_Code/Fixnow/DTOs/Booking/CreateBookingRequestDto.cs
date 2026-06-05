@@ -24,4 +24,6 @@ public class CreateBookingRequestDto
 
   [MaxLength(1000)]
   public string? Description { get; set; }
+
+  public List<string>? FileUrls { get; set; }
 }

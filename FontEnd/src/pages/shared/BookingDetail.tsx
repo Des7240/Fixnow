@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, Clock, Phone, CheckCircle, ChevronLeft, Star, AlertCircle, ListOrdered, X, Check, MessageSquare, AlertTriangle, FileText } from 'lucide-react';
 import axiosInstance from '../../utils/axiosInstance';
+import { getImageUrl } from '../../utils/constants';
 import { clsx } from 'clsx';
 import { message, Modal, Rate, Input, Popconfirm } from 'antd';
 import { useAuthStore } from '../../stores/authStore';
@@ -21,6 +22,7 @@ interface Booking {
   lat: number;
   lng: number;
   description: string;
+  fileUrls?: string[];
   createdAt: string;
   customer: {
     id: string;
@@ -342,6 +344,22 @@ export default function BookingDetail() {
               <p className="text-sm text-gray-700 font-medium mt-0.5">{booking.description || 'Không có mô tả'}</p>
             </div>
           </div>
+
+          {booking.fileUrls && booking.fileUrls.length > 0 && (
+            <div className="pt-4 mt-2">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Hình ảnh đính kèm</p>
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {booking.fileUrls.map((url, idx) => (
+                  <img 
+                    key={idx} 
+                    src={getImageUrl(url)} 
+                    alt={`attachment-${idx}`} 
+                    className="w-20 h-20 object-cover rounded-xl border border-gray-200 flex-shrink-0"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="pt-6 border-t border-gray-50 flex items-center justify-between">
             <div className="flex items-center gap-3">
