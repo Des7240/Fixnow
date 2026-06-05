@@ -345,21 +345,24 @@ export default function BookingDetail() {
             </div>
           </div>
 
-          {booking.fileUrls && booking.fileUrls.length > 0 && (
-            <div className="pt-4 mt-2">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Hình ảnh đính kèm</p>
+          <div className="pt-4 mt-2">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Hình ảnh đính kèm</p>
+            {booking.fileUrls && booking.fileUrls.length > 0 ? (
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {booking.fileUrls.map((url, idx) => (
                   <img 
                     key={idx} 
                     src={getImageUrl(url)} 
                     alt={`attachment-${idx}`} 
-                    className="w-20 h-20 object-cover rounded-xl border border-gray-200 flex-shrink-0"
+                    className="w-20 h-20 object-cover rounded-xl border border-gray-200 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => window.open(getImageUrl(url), '_blank')}
                   />
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <p className="text-sm text-gray-500 italic">Không có hình ảnh đính kèm</p>
+            )}
+          </div>
 
           <div className="pt-6 border-t border-gray-50 flex items-center justify-between">
             <div className="flex items-center gap-3">
