@@ -12,11 +12,13 @@ public class KycService : IKycService
 {
   private readonly IWorkerKycRepository _kycRepo;
   private readonly IWebHostEnvironment _env;
+  private readonly IFileService _fileService;
 
-  public KycService(IWorkerKycRepository kycRepo, IWebHostEnvironment env)
+  public KycService(IWorkerKycRepository kycRepo, IWebHostEnvironment env, IFileService fileService)
   {
     _kycRepo = kycRepo;
     _env = env;
+    _fileService = fileService;
   }
 
   public async Task<KycResponseDto> SubmitKycAsync(Guid workerId, SubmitKycDto request)
@@ -60,19 +62,8 @@ public class KycService : IKycService
     if (file == null || file.Length == 0)
       throw new ArgumentException("Invalid file.");
 
-    var uploadsFolder = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads", folder, workerId.ToString());
-    Directory.CreateDirectory(uploadsFolder);
-
-    var fileName = $"{Guid.NewGuid()}_{file.FileName}";
-    var filePath = Path.Combine(uploadsFolder, fileName);
-
-    using (var stream = new FileStream(filePath, FileMode.Create))
-    {
-      await file.CopyToAsync(stream);
-    }
-
-    // Return relative URL
-    return $"/uploads/{folder}/{workerId}/{fileName}";
+    var uploaded = await _fileService.UploadFileAsync(file, workerId, folder);
+    return uploaded.ObjectKey;
   }
 
   private static KycResponseDto MapToDto(WorkerKyc kyc)
