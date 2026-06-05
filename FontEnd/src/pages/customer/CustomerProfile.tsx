@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { User, Mail, Shield, Phone, LogOut, ChevronRight, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -17,7 +17,7 @@ const CustomerProfile: React.FC = () => {
     const [profileForm] = Form.useForm();
     const [loading, setLoading] = useState(false);
     const [avatarUploading, setAvatarUploading] = useState(false);
-    const fileInputRef = React.useRef<HTMLInputElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleLogout = async () => {
         try {

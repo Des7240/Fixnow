@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -35,7 +35,7 @@ export default function CreateBooking() {
   const [services, setServices] = useState<Service[]>([]);
   const [locating, setLocating] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<BookingForm>({
     resolver: zodResolver(bookingSchema),
