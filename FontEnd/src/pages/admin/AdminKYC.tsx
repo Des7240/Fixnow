@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Table, Tag, Button, Modal, message, Input } from 'antd';
 import { Eye, CheckCircle, XCircle } from 'lucide-react';
 import axiosInstance from '../../utils/axiosInstance';
+import { getImageUrl } from '../../utils/constants';
 
 export default function AdminKYC() {
   const [kycs, setKycs] = useState<any[]>([]);
@@ -99,13 +100,7 @@ export default function AdminKYC() {
     },
   ];
 
-  // Helper to get image full path (handle MinIO or local paths)
-  const getImageUrl = (path: string) => {
-    if (!path) return 'https://via.placeholder.com/300x200?text=No+Image';
-    if (path.startsWith('http')) return path;
-    const baseUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:8080';
-    return `${baseUrl}/${path}`;
-  };
+
 
   return (
     <div className="p-8 bg-gray-50 min-h-full">

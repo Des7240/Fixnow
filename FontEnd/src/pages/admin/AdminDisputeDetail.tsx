@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, CheckCircle, XCircle, DollarSign, Image as ImageIcon } from 'lucide-react';
 import { message, Modal, Input } from 'antd';
 import axiosInstance from '../../utils/axiosInstance';
+import { getImageUrl } from '../../utils/constants';
 import { clsx } from 'clsx';
 
 interface DisputeDetail {
@@ -169,9 +170,9 @@ export default function AdminDisputeDetail() {
             ) : (
               <div className="grid grid-cols-3 gap-4">
                 {dispute.evidences.map((ev) => (
-                  <a key={ev.id} href={import.meta.env.VITE_API_URL?.replace('/api/v1', '') + ev.fileUrl} target="_blank" rel="noreferrer" className="block relative group aspect-square rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                  <a key={ev.id} href={getImageUrl(ev.fileUrl)} target="_blank" rel="noreferrer" className="block relative group aspect-square rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
                     <img 
-                      src={import.meta.env.VITE_API_URL?.replace('/api/v1', '') + ev.fileUrl} 
+                      src={getImageUrl(ev.fileUrl)} 
                       alt="Evidence" 
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
                     />

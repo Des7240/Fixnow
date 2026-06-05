@@ -3,6 +3,7 @@ import { Table, Tag, Button, Space, Modal, Input, message, Tabs, Card, Statistic
 import { Search, ShieldAlert, Trash2, Eye, Flag, BarChart3, Users, Briefcase, Clock } from 'lucide-react';
 import { useOpenJobStore } from '../../stores/openJobStore';
 import type { OpenJob } from '../../stores/openJobStore';
+import { getImageUrl } from '../../utils/constants';
 import moment from 'moment';
 
 const { TabPane } = Tabs;
@@ -66,7 +67,7 @@ export default function AdminMarketplace() {
       render: (text: string, record: OpenJob) => (
         <Space>
           <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
-            {record.customerAvatar && <img src={record.customerAvatar} alt="avatar" className="w-full h-full object-cover" />}
+            {record.customerAvatar && <img src={getImageUrl(record.customerAvatar)} alt="avatar" className="w-full h-full object-cover" />}
           </div>
           <span className="font-medium">{text}</span>
         </Space>

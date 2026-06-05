@@ -7,6 +7,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../../modules/auth/authApi';
+import { getImageUrl } from '../../utils/constants';
 
 interface Review {
   id: string;
@@ -269,7 +270,7 @@ export default function WorkerProfile() {
                         {status === 'APPROVED' ? 'Đã duyệt' : status === 'REJECTED' ? 'Từ chối' : 'Đang chờ'}
                       </div>
                     )}
-                    <span className="text-2xl mb-1 mt-2">{srv.iconUrl ? <img src={srv.iconUrl} alt={srv.name} className="w-8 h-8 rounded-full" /> : '⚡'}</span>
+                    <span className="text-2xl mb-1 mt-2">{srv.iconUrl ? <img src={getImageUrl(srv.iconUrl)} alt={srv.name} className="w-8 h-8 rounded-full" /> : '⚡'}</span>
                     <span className="text-xs font-semibold">{srv.name}</span>
                   </div>
                 );

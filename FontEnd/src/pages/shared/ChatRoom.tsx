@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Send, Image as ImageIcon } from 'lucide-react';
 import { message } from 'antd';
 import axiosInstance from '../../utils/axiosInstance';
+import { getImageUrl } from '../../utils/constants';
 import { useAuthStore } from '../../stores/authStore';
 import { useChatStore } from '../../stores/chatStore';
 import { useSignalR } from '../../signalr/SignalRContext';
@@ -143,7 +144,7 @@ export default function ChatRoom() {
                 {msg.messageType === 'IMAGE' ? (
                   <div className="space-y-1">
                     {msg.attachmentUrls?.map((url: string, idx: number) => (
-                      <img key={idx} src={url} alt="Attachment" className="max-w-[200px] rounded-lg" />
+                      <img key={idx} src={getImageUrl(url)} alt="Attachment" className="max-w-[200px] rounded-lg" />
                     ))}
                     {msg.content && <p className="text-sm">{msg.content}</p>}
                   </div>
