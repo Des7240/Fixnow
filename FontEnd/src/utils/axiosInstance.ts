@@ -23,8 +23,8 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    // Check if error is 401 and we haven't retried yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Check if error is 401, not retried yet, and not a login request
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/login')) {
       originalRequest._retry = true;
       try {
         // Attempt to refresh token
