@@ -108,7 +108,10 @@ try {
 }
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-  options.UseNpgsql(dataSource, o => o.UseNetTopologySuite())
+  options.UseNpgsql(dataSource, o => {
+    o.UseNetTopologySuite();
+    o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+  })
 );
 
 // ─── JWT Authentication ───────────────────────────────────────────────────────
@@ -420,7 +423,7 @@ if (args.Length > 0 && args[0] == "seed")
     // await SeedData.Initialize(app.Services);
 }
 
-// Auto apply migrations on startup (for Render Cloud)
+// Auto apply migrations on startup (for Cloud Providers like Render, Neon)
 using (var scope = app.Services.CreateScope())
 {
     try
@@ -429,10 +432,29 @@ using (var scope = app.Services.CreateScope())
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Database.Migrate();
         Log.Information("Database migrations applied successfully.");
+
+        // Auto-create Admin user if not exists
+        var adminExists = db.Users.Any(u => u.Role == Fixnow.Enums.UserRole.ADMIN);
+        if (!adminExists)
+        {
+            var adminUser = new Fixnow.Entities.User
+            {
+                Email = "admin@fixnow.com",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123456"),
+                FullName = "System Admin",
+                Role = Fixnow.Enums.UserRole.ADMIN,
+                Status = "ACTIVE",
+                EmailVerified = true,
+                PhoneNumber = "0123456789"
+            };
+            db.Users.Add(adminUser);
+            db.SaveChanges();
+            Log.Information("Default Admin account created successfully.");
+        }
     }
     catch (Exception ex)
     {
-        Log.Error(ex, "Failed to apply database migrations.");
+        Log.Error(ex, "Failed to apply database migrations or seed admin.");
     }
 }
 
