@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Input, Select, DatePicker, Button, Space, Tag, message } from 'antd';
-import { SearchOutlined, FilterOutlined } from '@ant-graphics/icons'; // Note: Ant Design icons is probably @ant-design/icons but let's check. Actually I will just use lucide-react since it is already used in AdminDashboard.tsx
 import { Search, Filter, Calendar } from 'lucide-react';
-import { adminApi, GetBookingsQuery } from '../../api/admin';
+import { adminApi, type GetBookingsQuery } from '../../api/admin';
 import dayjs from 'dayjs';
 
 const { RangePicker } = DatePicker;

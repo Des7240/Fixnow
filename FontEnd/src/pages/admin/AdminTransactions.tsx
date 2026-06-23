@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Input, Select, DatePicker, Tag, message } from 'antd';
 import { Search } from 'lucide-react';
-import { adminApi, GetTransactionsQuery } from '../../api/admin';
+import { adminApi, type GetTransactionsQuery } from '../../api/admin';
 import dayjs from 'dayjs';
 
 const { RangePicker } = DatePicker;
