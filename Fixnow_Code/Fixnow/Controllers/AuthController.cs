@@ -45,7 +45,8 @@ public class AuthController : ControllerBase
     SetRefreshTokenCookie(result.RefreshToken);
 
     // Clear refresh token from body (security: keep in cookie only)
-    result.RefreshToken = string.Empty;
+    // For mobile app support, we need to return it in the body.
+    // result.RefreshToken = string.Empty;
 
     return Ok(result);
   }
@@ -62,7 +63,7 @@ public class AuthController : ControllerBase
     SetRefreshTokenCookie(result.RefreshToken);
 
     // Clear refresh token from body
-    result.RefreshToken = string.Empty;
+    // result.RefreshToken = string.Empty;
 
     return Ok(result);
   }
@@ -81,7 +82,7 @@ public class AuthController : ControllerBase
     var result = await _authService.RefreshTokenAsync(refreshToken);
 
     SetRefreshTokenCookie(result.RefreshToken);
-    result.RefreshToken = string.Empty;
+    // result.RefreshToken = string.Empty;
 
     return Ok(result);
   }

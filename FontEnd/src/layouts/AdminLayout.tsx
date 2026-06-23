@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, FileBadge, Settings, LogOut, AlertTriangle, ShoppingBag, Ticket } from 'lucide-react';
+import { LayoutDashboard, Users, FileBadge, Settings, LogOut, AlertTriangle, ShoppingBag, Ticket, ListOrdered, Wallet } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { clsx } from 'clsx';
 
@@ -11,6 +11,8 @@ export default function AdminLayout() {
   const navItems = [
     { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/admin/marketplace', icon: ShoppingBag, label: 'Quản lý Chợ' },
+    { path: '/admin/bookings', icon: ListOrdered, label: 'Lịch sử Đơn hàng' },
+    { path: '/admin/transactions', icon: Wallet, label: 'Lịch sử Giao dịch' },
     { path: '/admin/users', icon: Users, label: 'Quản lý Người dùng' },
     { path: '/admin/kyc', icon: FileBadge, label: 'Xét duyệt KYC' },
     { path: '/admin/skills', icon: FileBadge, label: 'Duyệt Kỹ Năng' },

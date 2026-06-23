@@ -1,7 +1,8 @@
 using Fixnow.DTOs.Admin;
 using Fixnow.DTOs.Auth;
 using Fixnow.DTOs.Kyc;
-
+using Fixnow.DTOs.Booking;
+using Fixnow.DTOs.Common;
 namespace Fixnow.Services.Interfaces;
 
 public interface IAdminService
@@ -16,6 +17,9 @@ public interface IAdminService
   Task<DashboardSummaryDto> GetDashboardSummaryAsync();
   Task<List<PendingWorkerServiceDto>> GetPendingWorkerServicesAsync();
   Task ReviewWorkerServiceAsync(Guid workerId, Guid serviceId, Guid adminId, ReviewWorkerServiceDto request);
+
+  Task<PagedResponseDto<BookingResponseDto>> GetAllBookingsAsync(GetBookingsQueryDto query);
+  Task<PagedResponseDto<PaymentAdminDto>> GetAllTransactionsAsync(GetTransactionsQueryDto query);
 
   // Phase 6: Dynamic Config & Service CRUD
   Task UpdateSystemConfigAsync(string key, string value, Guid adminId);

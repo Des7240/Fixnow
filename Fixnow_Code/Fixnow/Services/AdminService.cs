@@ -1,5 +1,8 @@
 using Fixnow.DTOs.Admin;
 using Fixnow.DTOs.Kyc;
+using Fixnow.Entities;
+using Fixnow.DTOs.Booking;
+using Fixnow.DTOs.Common;
 using Fixnow.Enums;
 using Fixnow.Repositories.Interfaces;
 using Fixnow.Services.Interfaces;
@@ -177,6 +180,140 @@ public class AdminService : IAdminService
   {
     await _workerServiceRepo.UpdateServiceStatusAsync(workerId, serviceId, request.Status);
     await _auditService.LogActionAsync($"WORKER_SERVICE_{request.Status}", "WorkerService", adminId, "ADMIN", workerId, null, $"{{ \"serviceId\": \"{serviceId}\" }}");
+  }
+
+  public async Task<PagedResponseDto<BookingResponseDto>> GetAllBookingsAsync(GetBookingsQueryDto query)
+  {
+    var q = _db.Bookings
+      .Include(b => b.Customer)
+      .Include(b => b.Worker)
+      .Include(b => b.Service)
+      .AsQueryable();
+
+    if (query.DateFrom.HasValue)
+      q = q.Where(b => b.CreatedAt >= query.DateFrom.Value);
+    
+    if (query.DateTo.HasValue)
+      q = q.Where(b => b.CreatedAt <= query.DateTo.Value);
+
+    if (query.Status.HasValue)
+      q = q.Where(b => b.Status == query.Status.Value);
+
+    if (!string.IsNullOrEmpty(query.SearchTerm))
+    {
+      var term = query.SearchTerm.ToLower();
+      q = q.Where(b => 
+        b.Id.ToString().ToLower().Contains(term) ||
+        (b.Customer != null && b.Customer.FullName.ToLower().Contains(term)) ||
+        (b.Worker != null && b.Worker.FullName.ToLower().Contains(term)));
+    }
+
+    var total = await q.CountAsync();
+
+    var items = await q
+      .OrderByDescending(b => b.CreatedAt)
+      .Skip((query.PageIndex - 1) * query.PageSize)
+      .Take(query.PageSize)
+      .Select(b => new BookingResponseDto
+      {
+        Id = b.Id,
+        Status = b.Status.ToString(),
+        PaymentStatus = b.PaymentStatus.ToString(),
+        Address = b.Address,
+        Lat = b.Lat,
+        Lng = b.Lng,
+        Description = b.Description,
+        FileUrls = b.FileUrls,
+        CreatedAt = b.CreatedAt,
+        Customer = new BookingPartyDto
+        {
+          Id = b.Customer.Id,
+          FullName = b.Customer.FullName,
+          Email = b.Customer.Email,
+          AvatarUrl = b.Customer.AvatarUrl
+        },
+        Worker = b.Worker != null ? new BookingPartyDto
+        {
+          Id = b.Worker.Id,
+          FullName = b.Worker.FullName,
+          Email = b.Worker.Email,
+          AvatarUrl = b.Worker.AvatarUrl
+        } : null,
+        Service = new BookingServiceDto
+        {
+          Id = b.Service.Id,
+          Name = b.Service.Name
+        }
+      })
+      .ToListAsync();
+
+    return new PagedResponseDto<BookingResponseDto>
+    {
+      Items = items,
+      TotalCount = total,
+      PageIndex = query.PageIndex,
+      PageSize = query.PageSize
+    };
+  }
+
+  public async Task<PagedResponseDto<PaymentAdminDto>> GetAllTransactionsAsync(GetTransactionsQueryDto query)
+  {
+    var q = _db.Payments
+      .Include(p => p.Customer)
+      .AsQueryable();
+
+    if (query.DateFrom.HasValue)
+      q = q.Where(p => p.CreatedAt >= query.DateFrom.Value);
+    
+    if (query.DateTo.HasValue)
+      q = q.Where(p => p.CreatedAt <= query.DateTo.Value);
+
+    if (!string.IsNullOrEmpty(query.Type))
+    {
+      if (Enum.TryParse<PaymentType>(query.Type, out var type))
+      {
+        q = q.Where(p => p.Type == type);
+      }
+    }
+
+    if (!string.IsNullOrEmpty(query.SearchTerm))
+    {
+      var term = query.SearchTerm.ToLower();
+      q = q.Where(p => 
+        (p.TransactionCode != null && p.TransactionCode.ToLower().Contains(term)) ||
+        p.Id.ToString().ToLower().Contains(term) ||
+        (p.Customer != null && p.Customer.FullName.ToLower().Contains(term))
+      );
+    }
+
+    var total = await q.CountAsync();
+
+    var items = await q
+      .OrderByDescending(p => p.CreatedAt)
+      .Skip((query.PageIndex - 1) * query.PageSize)
+      .Take(query.PageSize)
+      .Select(p => new PaymentAdminDto
+      {
+        Id = p.Id,
+        Amount = p.Amount,
+        Status = p.Status.ToString(),
+        Provider = p.Provider.ToString(),
+        Type = p.Type.ToString(),
+        TransactionCode = p.TransactionCode,
+        CreatedAt = p.CreatedAt,
+        CustomerId = p.CustomerId,
+        CustomerName = p.Customer.FullName,
+        CustomerEmail = p.Customer.Email
+      })
+      .ToListAsync();
+
+    return new PagedResponseDto<PaymentAdminDto>
+    {
+      Items = items,
+      TotalCount = total,
+      PageIndex = query.PageIndex,
+      PageSize = query.PageSize
+    };
   }
 
   // Phase 6: Dynamic Config & Service CRUD

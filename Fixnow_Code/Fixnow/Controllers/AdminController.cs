@@ -2,6 +2,8 @@ using System.Security.Claims;
 using Fixnow.DTOs.Admin;
 using Fixnow.DTOs.Kyc;
 using Fixnow.DTOs.OpenJob;
+using Fixnow.DTOs.Common;
+using Fixnow.DTOs.Booking;
 using Fixnow.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -134,6 +136,22 @@ public class AdminController : ControllerBase
   {
     await _openJobService.DeleteJobAsync(GetCurrentUserId(), id);
     return NoContent();
+  }
+
+  [HttpGet("bookings")]
+  [ProducesResponseType(typeof(PagedResponseDto<BookingResponseDto>), StatusCodes.Status200OK)]
+  public async Task<IActionResult> GetBookings([FromQuery] GetBookingsQueryDto query)
+  {
+    var result = await _adminService.GetAllBookingsAsync(query);
+    return Ok(result);
+  }
+
+  [HttpGet("transactions")]
+  [ProducesResponseType(typeof(PagedResponseDto<PaymentAdminDto>), StatusCodes.Status200OK)]
+  public async Task<IActionResult> GetTransactions([FromQuery] GetTransactionsQueryDto query)
+  {
+    var result = await _adminService.GetAllTransactionsAsync(query);
+    return Ok(result);
   }
 
   // Phase 6: Dynamic Config & Service CRUD

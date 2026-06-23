@@ -53,7 +53,8 @@ import AdminSettings from './pages/admin/AdminSettings';
 import AdminWorkerServices from './pages/admin/AdminWorkerServices';
 import UsersManagement from './pages/admin/UsersManagement';
 import AdminPromotions from './pages/admin/AdminPromotions';
-
+import AdminBookings from './pages/admin/AdminBookings';
+import AdminTransactions from './pages/admin/AdminTransactions';
 function App() {
   const { connection } = useSignalR();
   const { incrementUnreadCount } = useNotificationStore();
@@ -137,6 +138,8 @@ function App() {
             <Route path="/admin/kyc" element={<AdminKYC />} />
             <Route path="/admin/skills" element={<AdminWorkerServices />} />
             <Route path="/admin/promotions" element={<AdminPromotions />} />
+            <Route path="/admin/bookings" element={<AdminBookings />} />
+            <Route path="/admin/transactions" element={<AdminTransactions />} />
             <Route path="/admin/disputes" element={<DisputeManagement />} />
             <Route path="/admin/disputes/:id" element={<AdminDisputeDetail />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
